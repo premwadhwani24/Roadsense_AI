@@ -1,0 +1,24 @@
+# RoadSense AI .gitignore
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+roadsense.db
+
+# Environments
+.env
+venv/
+env/
+ENV/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Project-specific
+uploads/
+*.log
+static/temp/

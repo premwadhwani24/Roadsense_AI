@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSense - Login</title>
+    
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Elements */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .particle:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 10%;
+            left: 10%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            top: 70%;
+            right: 10%;
+            animation: float 8s ease-in-out infinite 1s;
+        }
+
+        .particle:nth-child(3) {
+            width: 40px;
+            height: 40px;
+            top: 50%;
+            left: 5%;
+            animation: float 7s ease-in-out infinite 2s;
+        }
+
+        .particle:nth-child(4) {
+            width: 100px;
+            height: 100px;
+            bottom: 5%;
+            right: 5%;
+            animation: float 9s ease-in-out infinite 1.5s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.3;
+            }
+            50% {
+                transform: translate(30px, -30px) scale(1.1);
+                opacity: 0.6;
+            }
+        }
+
+        /* Login Container */
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 10;
+            padding: 20px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 48px 32px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 32px;
+            animation: fadeInScale 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .logo {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        /* Form Section */
+        .form-group {
+            margin-bottom: 20px;
+            animation: fadeInSlide 0.8s ease-out both;
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .form-group:nth-child(1) { animation-delay: 0.3s; }
+        .form-group:nth-child(2) { animation-delay: 0.4s; }
+        .form-group:nth-child(3) { animation-delay: 0.5s; }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px 12px 40px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            color: #94a3b8;
+            font-size: 16px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        input:focus + .input-icon {
+            color: #667eea;
+            transform: scale(1.1);
+        }
+
+        input::placeholder {
+            color: #cbd5e1;
+        }
+
+        /* Remember Me & Forgot Password */
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            font-size: 13px;
+            animation: fadeInSlide 0.8s ease-out 0.6s both;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .checkbox.checked {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: #667eea;
+            color: white;
+        }
+
+        .forgot-password {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .forgot-password:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        /* Login Button */
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInSlide 0.8s ease-out 0.7s both;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.4s ease;
+        }
+
+        .login-btn:hover::before {
+            left: 100%;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .login-btn.loading {
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .login-btn.loading .spinner {
+            display: inline-block;
+        }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 32px 0;
+            color: #cbd5e1;
+            font-size: 13px;
+            animation: fadeInSlide 0.8s ease-out 0.8s both;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        /* Social Login */
+        .social-login {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            animation: fadeInSlide 0.8s ease-out 0.9s both;
+        }
+
+        .social-btn {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-btn:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+
+        /* Sign Up Link */
+        .signup-link {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 14px;
+            color: #64748b;
+            animation: fadeInSlide 0.8s ease-out 1s both;
+        }
+
+        .signup-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .signup-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        /* Error Message */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            display: none;
+            animation: shake 0.5s ease;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .glass-panel {
+                padding: 32px 24px;
+            }
+
+            .logo {
+                font-size: 2.5rem;
+            }
+
+            .logo-text {
+                font-size: 24px;
+            }
+
+            .social-login {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Login Container -->
+    <div class="login-container">
+        <div class="glass-panel">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-road"></i>
+                </div>
+                <div class="logo-text">RoadSense</div>
+                <div class="subtitle">AI-Powered Road Analytics Platform</div>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-circle"></i> Invalid credentials. Please try again.
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <!-- Email Field -->
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            placeholder="admin@roadsense.com" 
+                            required
+                        >
+                        <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="password123" 
+                            required
+                        >
+                        <span class="input-icon"><i class="fas fa-lock"></i></span>
+                    </div>
+                </div>
+
+                <!-- Remember Me & Forgot Password -->
+                <div class="form-footer">
+                    <label class="remember-me">
+                        <div class="checkbox" id="rememberCheckbox" onclick="toggleCheckbox()">
+                            <i class="fas fa-check" style="display: none;"></i>
+                        </div>
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" class="forgot-password">Forgot password?</a>
+                </div>
+
+                <!-- Login Button -->
+                <button type="submit" class="login-btn">
+                    <span class="spinner"></span>
+                    <span>Sign In</span>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="divider">Or continue with</div>
+
+            <!-- Social Login -->
+            <div class="social-login">
+                <button type="button" class="social-btn" title="Login with Google" onclick="socialLogin('google')">
+                    <i class="fab fa-google"></i>
+                </button>
+                <button type="button" class="social-btn" title="Login with Microsoft" onclick="socialLogin('microsoft')">
+                    <i class="fab fa-microsoft"></i>
+                </button>
+            </div>
+
+            <!-- Sign Up Link -->
+            <div class="signup-link">
+                Don't have an account? <a href="/signup">Create one</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle Remember Me Checkbox
+        function toggleCheckbox() {
+            const checkbox = document.getElementById('rememberCheckbox');
+            const checkIcon = checkbox.querySelector('i');
+            checkbox.classList.toggle('checked');
+            checkIcon.style.display = checkbox.classList.contains('checked') ? 'block' : 'none';
+        }
+
+        // Handle Login
+        function handleLogin(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = event.target.querySelector('.login-btn');
+            const errorMsg = document.getElementById('errorMessage');
+
+            // Clear previous error
+            errorMsg.classList.remove('show');
+
+            // Add loading state
+            btn.classList.add('loading');
+
+            // Make actual backend API call for authentication
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: email,  // Backend accepts username (using email as username)
+                    password: password
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Login failed');
+                }
+            })
+            .then(data => {
+                // Save remember me preference
+                const remember = document.getElementById('rememberCheckbox').classList.contains('checked');
+                if (remember) {
+                    localStorage.setItem('rememberEmail', email);
+                }
+                
+                // Redirect to dashboard
+                window.location.href = '/index';
+            })
+            .catch(error => {
+                // Show error
+                errorMsg.classList.add('show');
+                btn.classList.remove('loading');
+
+                // Shake the form
+                document.querySelector('.glass-panel').style.animation = 'none';
+                setTimeout(() => {
+                    document.querySelector('.glass-panel').style.animation = 'shake 0.5s ease';
+                }, 10);
+                
+                console.error('Login error:', error);
+            });
+        }
+
+        // Social Login Handler
+        function socialLogin(provider) {
+            alert(`${provider.toUpperCase()} login would redirect to: ${provider}.com/oauth`);
+        }
+
+        // Load remembered email on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const remembered = localStorage.getItem('rememberEmail');
+            if (remembered) {
+                document.getElementById('email').value = remembered;
+                document.getElementById('rememberCheckbox').classList.add('checked');
+                document.getElementById('rememberCheckbox').querySelector('i').style.display = 'block';
+            }
+        });
+
+        // Input focus animations
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'scale(1.02)';
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

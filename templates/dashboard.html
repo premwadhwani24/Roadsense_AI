@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RoadSense_AI — Operational Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f3f4f6;--panel:#ffffff;--muted:#6b7280;--accent:#0f172a}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--accent)}
+    .wrap{max-width:1200px;margin:24px auto;padding:16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .brand{font-weight:700}
+    .layout{display:grid;grid-template-columns:260px 1fr 320px;gap:12px}
+    .panel{background:var(--panel);padding:12px;border-radius:8px;border:1px solid #e6e9ef}
+    h2{margin:0 0 8px;font-size:1rem}
+    .kpis{display:flex;flex-direction:column;gap:8px}
+    .kpi{display:flex;justify-content:space-between;padding:10px;border-radius:6px;background:#f8fafc;border:1px solid #eef2f6}
+    #map{height:560px;border-radius:6px;background:#eee}
+    .filters{display:flex;flex-direction:column;gap:8px}
+    label{font-size:0.85rem;color:var(--muted)}
+    select,input[type=number],input[type=text]{width:100%;padding:8px;border:1px solid #e6e9ef;border-radius:6px}
+    .btn{padding:8px 10px;border-radius:6px;border:1px solid #d1d5db;background:#111827;color:#fff;cursor:pointer}
+    .detail h3{margin-top:0}
+    .small{font-size:0.9rem;color:var(--muted)}
+    @media(max-width:1000px){.layout{grid-template-columns:1fr;grid-auto-rows:auto}.panel{margin-bottom:10px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">RoadSense_AI</div>
+      <div style="margin-left:auto" class="small">AI‑assisted monitoring — operational view</div>
+    </header>
+
+    <div class="layout">
+      <!-- Left: Controls & KPIs -->
+      <div>
+        <div class="panel">
+          <h2>Controls</h2>
+          <div class="filters">
+            <div>
+              <label for="searchInput">Search location</label>
+              <input id="searchInput" type="text" placeholder="e.g., New Delhi" />
+            </div>
+            <div>
+              <label for="zoneFilter">Zone</label>
+              <select id="zoneFilter"><option value="ALL">All</option><option value="RED">Red</option><option value="YELLOW">Yellow</option><option value="GREEN">Green</option></select>
+            </div>
+            <div>
+              <label for="maxAge">Max age (months)</label>
+              <input id="maxAge" type="number" value="36" min="0" />
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px"><button class="btn" id="applyFilters">Apply</button><button class="btn" id="resetFilters">Reset</button></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+          <h2>Quick KPIs</h2>
+          <div class="kpis">
+            <div class="kpi"><span>Total segments</span><strong id="kTotal">-</strong></div>
+            <div class="kpi"><span>Active defects</span><strong id="kDefects">-</strong></div>
+            <div class="kpi"><span>High‑risk segments</span><strong id="kHighRisk">-</strong></div>
+            <div class="kpi"><span>Avg. age (months)</span><strong id="kAvgAge">-</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Map -->
+      <div>
+        <div class="panel">
+          <h2>Map — geo‑tagged defects</h2>
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <!-- Right: Segment detail -->
+      <div>
+        <div class="panel detail">
+          <h2>Segment detail</h2>
+          <div id="detailContent"><p class="small">Click a marker to view details here.</p></div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+          <h2>Priority queue</h2>
+          <div id="priorityList" class="small">No urgent segments (use filters to reveal).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Minimal operational JS: mock data + map rendering + filters
+    const zoneColors = { GREEN:'#28a745', YELLOW:'#d97706', RED:'#dc2626' };
+    let map, markers = [], allSegments = [];
+
+    function getRandomDate(){const t=new Date();const y=new Date(t.getFullYear()-2,t.getMonth(),t.getDate()).getTime();return new Date(y+Math.random()*(t.getTime()-y)).toISOString().split('T')[0]}
+    function ageDays(d){return Math.ceil((Date.now()-new Date(d))/86400000)}
+
+    function generateMockData(center={lat:28.6448,lng:77.2167,variance:0.05},count=100){const zones=['GREEN','YELLOW','RED'],names=['Highway','Street','Avenue'];let arr=[];for(let i=0;i<count;i++){let z=zones[Math.floor(Math.random()*zones.length)];let last=getRandomDate();let t=Math.random()*0.8+0.2;let s={id:'S'+(1000+i),name:`${names[i%names.length]} ${i+1}`,lat:center.lat+(Math.random()-0.5)*center.variance,lng:center.lng+(Math.random()-0.5)*center.variance,zone:z,last_repaired:last,traffic_factor:parseFloat(t.toFixed(2)),rain_mm:parseFloat((Math.random()*20).toFixed(1)),age_days:ageDays(last)};if(z==='RED'){s.traffic_factor=parseFloat((Math.random()*0.2+0.8).toFixed(2));}arr.push(s);}return arr}
+
+    function loadGoogleMaps(){
+      if(window.google && google.maps) return initMap();
+      const s=document.createElement('script');
+      s.src='https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap';
+      s.async=true; s.defer=true; s.onerror=()=>{document.getElementById('map').innerHTML='<div style="padding:20px;color:#555">Map unavailable — provide Google Maps API key for full map.</div>';renderListFallback();};
+      document.head.appendChild(s);
+    }
+
+    window.initMap=function(){
+      const center={lat:28.6448,lng:77.2167};
+      map=new google.maps.Map(document.getElementById('map'),{center,zoom:11,streetViewControl:false});
+      allSegments=generateMockData();updateAll();
+    }
+
+    function renderListFallback(){allSegments=generateMockData();updateAll();}
+
+    function updateAll(){updateKPIs();applyFiltersAndRender();updatePriority();}
+
+    function applyFiltersAndRender(){const zone=document.getElementById('zoneFilter').value;const maxAge=parseInt(document.getElementById('maxAge').value||36,10);let filtered=allSegments.filter(s=> (zone==='ALL'||s.zone===zone) && (s.age_days/30.4375)<=maxAge);renderMarkers(filtered);updateFilteredStats(filtered)}
+
+    function renderMarkers(list){if(typeof google==='undefined' || !map){renderListAsFallback(list);return;}markers.forEach(m=>m.setMap(null));markers=[];list.forEach(s=>{const m=new google.maps.Marker({position:{lat:s.lat,lng:s.lng},map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:zoneColors[s.zone],fillOpacity:0.9,strokeColor:'#fff',strokeWeight:1}});m.segment=s;m.addListener('click',()=>{showDetail(s);map.panTo(m.getPosition())});markers.push(m)})}
+
+    function renderListAsFallback(list){const mapEl=document.getElementById('map');mapEl.innerHTML='';const ul=document.createElement('div');ul.style.padding='12px';ul.innerHTML=`<div style="color:#374151;font-weight:600;margin-bottom:8px">Segments (${list.length})</div>`;list.slice(0,50).forEach(s=>{const row=document.createElement('div');row.style.padding='8px';row.style.borderBottom='1px solid #eef2f6';row.style.cursor='pointer';row.innerHTML=`<div style="display:flex;justify-content:space-between"><div>${s.name} <small style="color:#6b7280">${s.id}</small></div><div style="color:${zoneColors[s.zone]};font-weight:700">${s.zone}</div></div>`;row.onclick=()=>showDetail(s);ul.appendChild(row)});mapEl.appendChild(ul)}
+
+    function showDetail(s){document.getElementById('detailContent').innerHTML=`<h3 style="color:${zoneColors[s.zone]}">${s.name} — ${s.id}</h3><div class="small">Zone: ${s.zone}</div><div class="small">Last repaired: ${s.last_repaired} (${(s.age_days/30.4375).toFixed(1)} months)</div><div class="small">Traffic: ${(s.traffic_factor*100).toFixed(0)}%</div><div style="margin-top:8px">${s.zone==='RED'?'<strong style="color:#dc2626">URGENT: Inspect and prioritise</strong>':'Routine monitoring suggested'}</div>`}
+
+    function updateKPIs(){document.getElementById('kTotal').textContent=allSegments.length;document.getElementById('kDefects').textContent=allSegments.filter(s=>s.zone!=='GREEN').length;document.getElementById('kHighRisk').textContent=allSegments.filter(s=>s.zone==='RED').length;const avg=(allSegments.reduce((a,b)=>a+b.age_days,0)/allSegments.length/30.4375).toFixed(1);document.getElementById('kAvgAge').textContent=avg}
+
+    function updateFilteredStats(list){document.getElementById('kTotal').textContent=list.length}
+
+    function updatePriority(){const urgent=allSegments.filter(s=>s.zone!=='GREEN').sort((a,b)=>a.zone===b.zone?b.age_days-a.age_days:(a.zone==='RED'? -1:1)).slice(0,8);if(!urgent.length){document.getElementById('priorityList').textContent='No urgent segments.';return}document.getElementById('priorityList').innerHTML=urgent.map((s,i)=>`<div style="padding:6px;border-bottom:1px solid #eef2f6"><strong>#${i+1}</strong> ${s.id} <span style="float:right;color:${zoneColors[s.zone]}">${s.zone}</span></div>`).join('')}
+
+    // Wire UI
+    document.getElementById('applyFilters').addEventListener('click',applyFiltersAndRender);
+    document.getElementById('resetFilters').addEventListener('click',()=>{document.getElementById('zoneFilter').value='ALL';document.getElementById('maxAge').value=36;applyFiltersAndRender()});
+    document.getElementById('searchInput').addEventListener('keypress',e=>{if(e.key==='Enter'){applyFiltersAndRender()}})
+
+    // Start
+    loadGoogleMaps();
+  </script>
+</body>
+</html>
+    <style>
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 25px;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .kpi-card.accident { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .kpi-card.prediction { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .kpi-card.maintenance { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .kpi-card.pothole { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        
+        .kpi-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .kpi-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 8px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        
+        .sidebar {
+            background: #1a237e;
+            color: white;
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .nav-item {
+            padding: 15px 20px;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: #4caf50;
+        }
+        
+        .main-header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1a237e;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .alert-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        
+        .alert-badge.critical { background: #ffcdd2; color: #c62828; }
+        .alert-badge.high { background: #ffe0b2; color: #e65100; }
+        .alert-badge.medium { background: #fff9c4; color: #f57f17; }
+        .alert-badge.low { background: #c8e6c9; color: #2e7d32; }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-badge.pending { background: #fff3e0; color: #e65100; }
+        .status-badge.in-progress { background: #e1f5fe; color: #01579b; }
+        .status-badge.completed { background: #c8e6c9; color: #2e7d32; }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a237e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-64 sidebar">
+            <div class="sidebar-header">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-road"></i> RoadSense
+                </h2>
+            </div>
+            <nav>
+                <div class="nav-item active" onclick="navigateTo('dashboard')">
+                    <i class="fas fa-chart-line mr-2"></i> Dashboard
+                </div>
+                <div class="nav-item" onclick="navigateTo('alerts')">
+                    <i class="fas fa-bell mr-2"></i> Alerts
+                    <span id="alertBadge" class="float-right bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-xs">0</span>
+                </div>
+                <div class="nav-item" onclick="navigateTo('predictions')">
+                    <i class="fas fa-robot mr-2"></i> Predictions
+                </div>
+                <div class="nav-item" onclick="navigateTo('maintenance')">
+                    <i class="fas fa-wrench mr-2"></i> Maintenance
+                </div>
+                <div class="nav-item" onclick="navigateTo('reports')">
+                    <i class="fas fa-file-alt mr-2"></i> Reports
+                </div>
+                <div class="nav-item" onclick="navigateTo('analytics')">
+                    <i class="fas fa-chart-bar mr-2"></i> Analytics
+                </div>
+                <div class="nav-item" onclick="navigateTo('nextgen')">
+                    <i class="fas fa-brain mr-2 text-indigo-400"></i> Next-Gen AI
+                </div>
+                <hr class="my-4 border-gray-700">
+                <div class="nav-item" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1">
+            <!-- Header -->
+            <div class="main-header">
+                <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                <div class="user-menu">
+                    <input type="text" placeholder="Search..." class="px-4 py-2 border rounded-lg">
+                    <div class="user-avatar" title="Your Profile">A</div>
+                    <div>
+                        <div class="text-sm font-semibold" id="userName">User</div>
+                        <div class="text-xs text-gray-600" id="userRole">Role</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="p-8">
+                <!-- KPI Cards -->
+                <div id="dashboardContent">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Critical Roads</div>
+                            <div class="kpi-number" id="criticalRoads">0</div>
+                            <div class="stat-change">↑ Real-time</div>
+                        </div>
+                        <div class="kpi-card accident">
+                            <div class="kpi-label">Accidents Prevented (This Month)</div>
+                            <div class="kpi-number" id="accidentsPrevented">12</div>
+                            <div class="stat-change">↓ 95% reduction</div>
+                        </div>
+                        <div class="kpi-card prediction">
+                            <div class="kpi-label">Predicted Issues</div>
+                            <div class="kpi-number" id="predictedIssues">0</div>
+                            <div class="stat-change">📊 AI Model</div>
+                        </div>
+                        <div class="kpi-card maintenance">
+                            <div class="kpi-label">Cost Savings</div>
+                            <div class="kpi-number" id="costSavings">₹0</div>
+                            <div class="stat-change">💰 40% optimized</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="chart-container">
+                            <h3 class="text-lg font-semibold mb-4">Road Condition Trends</h3>
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="text-lg font-semibold mb-4">Alert Distribution</h3>
+                            <canvas id="alertChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Table -->
+                    <div class="chart-container mb-8">
+                        <h3 class="text-lg font-semibold mb-4">Recent Alerts</h3>
+                        <div id="alertsLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading alerts...</p>
+                        </div>
+                        <table class="data-table" id="alertsTable" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th>Road ID</th>
+                                    <th>Location</th>
+                                    <th>Severity</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alertsTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Predictions Table -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4">AI Predictions - Next 30 Days</h3>
+                        <div id="predictionsLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>Generating predictions...</p>
+                        </div>
+                        <table class="data-table" id="predictionsTable" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th>Road</th>
+                                    <th>Current Severity</th>
+                                    <th>Predicted Severity</th>
+                                    <th>Est. Potholes</th>
+                                    <th>Urgency</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictionsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Alerts Section -->
+                <div id="alertsContent" style="display:none;">
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4">All Alerts</h3>
+                        <div id="allAlertsTable"></div>
+                    </div>
+                </div>
+
+                <!-- Predictions Section -->
+                <div id="predictionsContent" style="display:none;">
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4">AI-Powered Predictions</h3>
+                        <p>Select a road or city to view detailed predictions...</p>
+                        <div id="detailedPredictions"></div>
+                    </div>
+                </div>
+
+                <!-- Maintenance Section -->
+                <div id="maintenanceContent" style="display:none;">
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4">Work Orders & Maintenance</h3>
+                        <div id="maintenanceTable"></div>
+                    </div>
+                </div>
+
+                <!-- Next-Gen Section -->
+                <div id="nextgenContent" style="display:none;">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="chart-container">
+                            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-project-diagram text-indigo-500"></i> Discovered Graph Risk Zones</h3>
+                            <div id="graphZonesData" class="text-sm">Fetching...</div>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-link text-blue-500"></i> Blockchain Ledger</h3>
+                            <pre id="auditLedgerData" class="text-xs bg-gray-100 p-2 rounded overflow-auto" style="height:150px;">Fetching...</pre>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-comment-dots text-green-500"></i> LLM Maintenance Advisory</h3>
+                        <div id="llmAdvisoryData" class="p-4 bg-green-50 border-l-4 border-green-500 text-green-900 rounded">
+                            Loading LLM Advisory Engine...
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-vr-cardboard text-purple-500"></i> Digital Twin Infrastructure</h3>
+                        <div id="twinData" class="text-sm">Initiating digital twin simulation loop...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get JWT token from localStorage
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        // Set user info
+        document.getElementById('userName').textContent = user.username || 'User';
+        document.getElementById('userRole').textContent = (user.role || 'viewer').charAt(0).toUpperCase() + (user.role || 'viewer').slice(1);
+
+        // Navigation
+        function navigateTo(section) {
+            // Hide all sections
+            document.getElementById('dashboardContent').style.display = 'none';
+            document.getElementById('alertsContent').style.display = 'none';
+            document.getElementById('predictionsContent').style.display = 'none';
+            document.getElementById('maintenanceContent').style.display = 'none';
+            document.getElementById('nextgenContent').style.display = 'none';
+
+            // Update active nav
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.nav-item').classList.add('active');
+
+            // Show selected section
+            if (section === 'dashboard') {
+                document.getElementById('dashboardContent').style.display = 'block';
+                loadDashboard();
+            } else if (section === 'alerts') {
+                document.getElementById('alertsContent').style.display = 'block';
+            } else if (section === 'nextgen') {
+                document.getElementById('nextgenContent').style.display = 'block';
+                loadNextGen();
+            }
+            // Add more sections as needed
+        }
+
+        // Load Next-Gen Stats
+        function loadNextGen() {
+            // Blockchain ledger
+            fetch('/api/v2/audit/ledger').then(r=>r.json()).then(data => {
+                document.getElementById('auditLedgerData').textContent = JSON.stringify(data, null, 2);
+            });
+            
+            // LLM Advisory
+            fetch('/api/v2/llm/advisory/Highway-NH52').then(r=>r.json()).then(data => {
+                document.getElementById('llmAdvisoryData').innerHTML = '<strong>LLM Advisory:</strong><br/>' + data.advisory;
+            });
+            
+            // Graph Risk
+            fetch('/api/v2/graph/high-risk').then(r=>r.json()).then(data => {
+                const markup = data.map(d => `<div class="mb-2 p-2 border rounded"><strong>${d.zone_name}</strong> - <span class="text-red-500">${d.risk_level}</span><br/><span class="text-gray-500">${d.reason}</span></div>`).join('');
+                document.getElementById('graphZonesData').innerHTML = markup;
+            });
+
+            // Digital twin
+            fetch('/api/v2/digital-twin/MAIN_ARTERY', {method: 'POST'}).then(r=>r.json()).then(data => {
+                document.getElementById('twinData').innerHTML = `<div class="p-2 border rounded">Road ID: ${data.road_id}<br/>Computed Health: <strong>${data.computed_health_score}</strong><br/>Simulated Stress: ${data.simulated_structural_stress}</div>`;
+            });
+        }
+
+        // Load Dashboard Data
+        function loadDashboard() {
+            // Load alerts
+            fetch('/api/alerts', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(r => r.json())
+            .then(data => {
+                const alerts = data.alerts || [];
+                const critical = alerts.filter(a => a.severity === 'CRITICAL').length;
+                document.getElementById('criticalRoads').textContent = critical;
+                
+                // Populate alerts table
+                document.getElementById('alertsLoading').style.display = 'none';
+                document.getElementById('alertsTable').style.display = 'table';
+                
+                const tbody = document.getElementById('alertsTableBody');
+                tbody.innerHTML = alerts.slice(0, 5).map(alert => `
+                    <tr>
+                        <td>${alert.road_id}</td>
+                        <td>${alert.description}</td>
+                        <td><span class="alert-badge ${alert.severity.toLowerCase()}">${alert.severity}</span></td>
+                        <td><span class="status-badge ${alert.status.toLowerCase().replace(/_/g, '-')}">${alert.status}</span></td>
+                        <td>${new Date(alert.timestamp).toLocaleDateString()}</td>
+                        <td><button onclick="alert('View details')" class="text-blue-600">View</button></td>
+                    </tr>
+                `).join('');
+            })
+            .catch(e => console.error('Error loading alerts:', e));
+
+            // Load predictions
+            fetch('/api/predictions/report/' + (user.city || 'Delhi'), {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('predictedIssues').textContent = data.critical_roads;
+                    
+                    document.getElementById('predictionsLoading').style.display = 'none';
+                    document.getElementById('predictionsTable').style.display = 'table';
+                    
+                    const tbody = document.getElementById('predictionsTableBody');
+                    tbody.innerHTML = data.high_risk_roads.slice(0, 5).map(road => `
+                        <tr>
+                            <td>Road ${road.road_id}</td>
+                            <td>${Math.round(road.factor_breakdown?.severity || 0) / 2}%</td>
+                            <td><strong>${road.risk_score}</strong></td>
+                            <td>${Math.round(road.risk_score / 10)}</td>
+                            <td><span class="alert-badge ${road.risk_level.toLowerCase()}">${road.risk_level}</span></td>
+                            <td><button onclick="alert('Creating work order...')" class="text-green-600">Action</button></td>
+                        </tr>
+                    `).join('');
+                }
+            })
+            .catch(e => console.error('Error loading predictions:', e));
+
+            // Load charts
+            loadCharts();
+        }
+
+        // Load Charts
+        function loadCharts() {
+            // Trend Chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Road Severity',
+                        data: [45, 52, 58, 62],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+
+            // Alert Chart
+            const alertCtx = document.getElementById('alertChart').getContext('2d');
+            new Chart(alertCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low'],
+                    datasets: [{
+                        data: [5, 12, 18, 25],
+                        backgroundColor: ['#f5576c', '#fa709a', '#fee140', '#43e97b']
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        // Logout
+        function handleLogout() {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        // Initial load
+        window.addEventListener('load', loadDashboard);
+    </script>
+</body>
+</html>

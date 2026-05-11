@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Document Metadata -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadSense AI Dashboard - Comprehensive Monitoring</title>
+    
+    <!-- External Dependencies: Tailwind CSS (Utility Framework) and FontAwesome (Icons) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+    
+    <!-- Google Maps API Loader (Key intentionally left empty to prevent InvalidKeyMapError) -->
+    <!-- The callback function is 'initMap' -->
+    <script src="https://maps.googleapis.com/maps/api/js?callback=initMap" defer></script>
+
+    <!--
+    ====================================================================================================
+    SECTION 1: INLINE STYLING (CSS)
+    Defines the professional, high-contrast layout, and dynamic UI elements using custom CSS.
+    ====================================================================================================
+    -->
+    <style>
+        /* Base Styles and Font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #eef2f6; /* Light gray-blue background */
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* --- Header Section Styling --- */
+        .header {
+            background-color: #1a237e; /* Deep Indigo/Blue, primary brand color */
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .header-logo {
+            font-size: 1.8em;
+            font-weight: 800;
+        }
+
+        /* --- Dynamic AI Status Banner Styling --- */
+        .status-banner {
+            padding: 12px 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 1.05em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s; 
+            border-bottom: 3px solid transparent;
+        }
+        
+        /* Zone Colors */
+        .green-color { color: #28a745; }
+        .yellow-color { color: #ffc107; }
+        .red-color { color: #dc3545; }
+
+        .status-green { background-color: #e6ffed; border-bottom-color: #28a745; }
+        .status-yellow { background-color: #fff9e6; border-bottom-color: #ffc107; }
+        .status-red { background-color: #ffe6e6; border-bottom-color: #dc3545; }
+
+        .status-detail { font-weight: normal; font-size: 0.9em; }
+
+        /* --- General Card Component Styling --- */
+        .card {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Stronger shadow for depth */
+        }
+
+        .card h2 {
+            color: #1a237e;
+            font-size: 1.4em;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f4f8;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        /* --- Dashboard Layout (Main 3-Column Grid) --- */
+        .dashboard-container {
+            padding: 20px 30px;
+            display: flex;
+            gap: 25px; 
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Left and Right Sidebars */
+        .sidebar {
+            width: 300px; /* Wider sidebars for more controls/detail */
+            min-width: 300px;
+            height: fit-content;
+            transition: all 0.3s ease;
+        }
+
+        /* Center Column (Map and Overview Cards) */
+        .main-visualization {
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* --- Form Controls Styling --- */
+        .control-group {
+            margin-bottom: 18px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #444;
+            font-size: 0.95em;
+        }
+
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            outline: none;
+        }
+
+        /* --- Button Styling --- */
+        .primary-btn {
+            background-color: #dc3545; /* Red accent for primary action */
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.05em;
+            width: 100%;
+            margin-top: 15px;
+            box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
+            transition: background-color 0.3s, transform 0.1s, box-shadow 0.3s;
+        }
+
+        .primary-btn:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(220, 53, 69, 0.4);
+        }
+        
+        .search-input-group {
+            display: flex; 
+            gap: 8px; 
+            align-items: center;
+        }
+        
+        #searchMapBtn {
+            padding: 12px;
+            width: 50px; 
+            min-width: 50px; 
+            margin-top: 0;
+            font-size: 1.1em;
+            background-color: #4a90e2; /* Blue for search action */
+            box-shadow: 0 4px 6px rgba(74, 144, 226, 0.3);
+        }
+        
+        #searchMapBtn:hover {
+            background-color: #3b7ad0;
+        }
+
+        .report-status-msg {
+            display: block;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.95em;
+            color: #1a237e;
+            font-weight: 500;
+        }
+
+        /* --- Real-Time Overview Cards Layout --- */
+        .factor-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px;
+        }
+
+        .factor-card {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            transition: all 0.2s;
+        }
+
+        .factor-card:hover {
+            border-color: #4a90e2;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .factor-icon-container {
+            font-size: 2em;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .factor-info h3 {
+            margin: 0 0 5px;
+            font-size: 0.85em;
+            color: #666;
+            font-weight: 600;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .factor-value {
+            font-size: 1.8em;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .factor-value.date-value {
+            font-size: 1.2em; 
+            font-weight: 700;
+        }
+        
+        /* Thematic Coloring for Factor Cards */
+        .red-zone-card { background-color: #fef2f2; } /* Red Zone Card */
+        .red-zone-card .factor-icon-container { color: white; background-color: #dc3545; }
+        .red-zone-card .factor-value { color: #dc3545; }
+
+        .traffic-card { background-color: #f0f8ff; } /* Traffic Load Card (Blue) */
+        .traffic-card .factor-icon-container { color: white; background-color: #4a90e2; }
+        .traffic-card .factor-value { color: #4a90e2; }
+
+        .repair-old-card { background-color: #fffaf0; } /* Oldest Repair Card (Orange/Warning) */
+        .repair-old-card .factor-icon-container { color: white; background-color: #ff7f00; }
+        .repair-old-card .factor-value { color: #ff7f00; }
+
+        .repair-new-card { background-color: #f0fff0; } /* Newest Repair Card (Green/Success) */
+        .repair-new-card .factor-icon-container { color: white; background-color: #28a745; }
+        .repair-new-card .factor-value { color: #28a745; }
+
+        /* --- Aggregate Statistics Panel (New) --- */
+        #stats-panel h3 {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #1a237e;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-bottom: 1px dotted #eee;
+            padding-bottom: 5px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f9f9f9;
+            font-size: 1em;
+        }
+
+        .stat-label { color: #666; }
+        .stat-value { font-weight: 700; }
+
+        /* --- Map Visualization Area --- */
+        #map {
+            height: 600px;
+            min-height: 600px;
+            position: relative; 
+            overflow: hidden; /* Hide potential map artifacts */
+        }
+        
+        /* Map Loading Overlay */
+        #loadingOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            color: #1a237e;
+            z-index: 10;
+            border-radius: 12px;
+            transition: opacity 0.5s;
+            opacity: 0; 
+            pointer-events: none;
+        }
+
+        .map-loading #loadingOverlay {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* --- Interactive Detail Panel (Right Sidebar) --- */
+        #segmentDetailPanel {
+            padding: 25px 20px;
+            overflow-y: auto;
+            max-height: 80vh; /* Scrollable if content is long */
+        }
+
+        .detail-panel-placeholder .placeholder-text {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 50px 10px;
+            border: 1px dashed #e0e0e0;
+            border-radius: 8px;
+            background-color: #fcfcfc;
+        }
+        
+        /* Mock Road Visualization */
+        #segmentImagePlaceholder {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.1em;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, var(--bg-color-1) 0%, var(--bg-color-2) 100%);
+        }
+
+        /* Custom properties for mock image gradient colors */
+        .placeholder-red { --bg-color-1: #c82333; --bg-color-2: #dc3545; }
+        .placeholder-yellow { --bg-color-1: #ffc107; --bg-color-2: #e0a800; }
+        .placeholder-green { --bg-color-1: #28a745; --bg-color-2: #1e873a; }
+
+        /* Detail Items */
+        .segment-detail-item {
+            padding: 10px 0;
+            border-bottom: 1px dotted #eee;
+        }
+
+        .segment-detail-item strong {
+            display: block;
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 3px;
+        }
+
+        .segment-detail-item span {
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .action-required {
+            color: #dc3545;
+            font-weight: 800;
+        }
+        
+        /* --- Footer Legend --- */
+        .legend-footer {
+            padding: 15px 30px;
+            background-color: #3f51b5; /* Medium Blue */
+            color: white;
+            margin-top: 25px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-items {
+            display: flex;
+            gap: 40px;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* --- Responsive Design --- */
+        @media (max-width: 1400px) {
+            .factor-grid {
+                grid-template-columns: repeat(2, 1fr); 
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                flex-direction: column; 
+                padding: 20px 20px;
+            }
+            .sidebar {
+                width: 100%;
+                min-width: unset;
+                order: initial;
+            }
+            .main-visualization {
+                width: 100%;
+                order: 1; 
+            }
+            .factor-grid {
+                grid-template-columns: 1fr; /* Stack metric cards one per row */
+            }
+            .legend-items {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+
+</head>
+<body>
+    
+    <!-- Application Body Content -->
+    <div class="header">
+        <div class="header-logo"><i class="fas fa-satellite-dish"></i> RoadSense AI</div>
+        <h1 class="text-lg opacity-90">Real-Time Infrastructure Monitoring and Predictive Analysis</h1>
+    </div>
+    
+    <!-- AI Status Bar -->
+    <div id="aiStatusBanner" class="status-banner status-green">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-check-circle"></i> 
+            <span id="aiStatusText">System Operational. Overall road health is currently GREEN.</span>
+        </div>
+        <span id="aiStatusDetail" class="status-detail"></span>
+    </div>
+
+    <div class="dashboard-container">
+        
+        <!-- COLUMN 1: Filter, Stats, and Report Generation Panel (Left Sidebar) -->
+        <div class="sidebar controls-card card">
+            <h2><i class="fas fa-filter"></i> Filters & Controls</h2>
+            
+            <!-- Location Search (Updated to reflect expanded India coverage) -->
+            <div class="control-group">
+                <label for="cityStateInput"><i class="fas fa-map-marked"></i> Target Location:</label>
+                <div class="search-input-group">
+                    <input type="text" id="cityStateInput" placeholder="e.g., Mumbai, Maharashtra" value="New Delhi, India" onkeypress="handleSearchKey(event)">
+                    <button id="searchMapBtn" class="primary-btn"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2 mb-4">Try searching: Mumbai, Bengaluru, Chennai, Kolkata, Ahmedabad, Jaipur, Gwalior, etc.</p>
+
+            <!-- Zone Filter -->
+            <div class="control-group">
+                <label for="zoneFilter"><i class="fas fa-traffic-light"></i> Filter by Zone Status:</label>
+                <select id="zoneFilter" onchange="applyFiltersAndRender()">
+                    <option value="ALL">Show All Zones</option>
+                    <option value="RED">Red Zone (Critical)</option>
+                    <option value="YELLOW">Yellow Zone (Risk)</option>
+                    <option value="GREEN">Green Zone (Good)</option>
+                </select>
+            </div>
+            
+            <!-- Repair Age Filter -->
+            <div class="control-group">
+                <label for="maxRepairAge"><i class="fas fa-calendar-times"></i> Max Repair Age (Months):</label>
+                <input type="number" id="maxRepairAge" value="36" min="0" oninput="applyFiltersAndRender()">
+            </div>
+            
+            <!-- Traffic Load Filter -->
+            <div class="control-group">
+                <label for="minTrafficLoad"><i class="fas fa-weight-hanging"></i> Min Traffic Load (Index 0-1):</label>
+                <input type="range" id="minTrafficLoad" min="0" max="1" step="0.05" value="0" oninput="document.getElementById('trafficValue').innerText=this.value; applyFiltersAndRender()">
+                <div class="flex justify-between text-sm text-gray-500 mt-1">
+                    <span>0 (Low)</span>
+                    <span id="trafficValue" class="font-bold text-gray-700">0</span>
+                    <span>1 (High)</span>
+                </div>
+            </div>
+
+            <hr class="my-6 border-t border-gray-100">
+
+            <!-- Report Generation -->
+            <h2><i class="fas fa-file-export"></i> Report Generation</h2>
+            
+            <div class="control-group">
+                <label for="startDate"><i class="fas fa-calendar-alt"></i> Start Date:</label>
+                <input type="date" id="startDate" value="2025-09-01">
+            </div>
+
+            <div class="control-group">
+                <label for="endDate"><i class="fas fa-calendar-alt"></i> End Date:</label>
+                <input type="date" id="endDate" value="2025-09-20">
+            </div>
+
+            <button id="generateReportBtn" class="primary-btn">GENERATE ANALYTICS REPORT <i class="fas fa-file-download"></i></button>
+            <span id="statusMessage" class="report-status-msg"></span>
+            
+            <hr class="my-6 border-t border-gray-100">
+            
+            <!-- Aggregate Stats Panel (New) -->
+            <div id="stats-panel">
+                <h2><i class="fas fa-chart-line"></i> Filtered Stats</h2>
+                <div class="stat-item">
+                    <span class="stat-label">Total Segments Displayed:</span>
+                    <span id="stat-total" class="stat-value">...</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label red-color">Critical Segments:</span>
+                    <span id="stat-red" class="stat-value red-color">...</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label yellow-color">Risk Segments:</span>
+                    <span id="stat-yellow" class="stat-value yellow-color">...</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label green-color">Good Segments:</span>
+                    <span id="stat-green" class="stat-value green-color">...</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Avg. Segment Age (Days):</span>
+                    <span id="stat-avg-age" class="stat-value">...</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- COLUMN 2: Main Visualization Area (Overview Cards + Map) -->
+        <div class="main-visualization">
+            
+            <!-- Real-Time Data Analysis Cards (4 Metrics) -->
+            <div class="real-time-panel card">
+                <h2><i class="fas fa-tachometer-alt"></i> Network Overview (Today)</h2>
+                <div class="factor-grid">
+                    
+                    <!-- Card 1: Critical Red Zones -->
+                    <div class="factor-card red-zone-card">
+                        <div class="factor-icon-container"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="factor-info">
+                            <h3>Total Red Zones</h3>
+                            <p id="redZoneCount" class="factor-value">...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Card 2: Average Traffic Load Factor -->
+                    <div class="factor-card traffic-card">
+                        <div class="factor-icon-container"><i class="fas fa-truck-moving"></i></div>
+                        <div class="factor-info">
+                            <h3>Avg. Traffic Load</h3>
+                            <p id="avgTraffic" class="factor-value">...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Card 3: Oldest Repair Date (Risk Indicator) -->
+                    <div class="factor-card repair-old-card">
+                        <div class="factor-icon-container"><i class="fas fa-history"></i></div>
+                        <div class="factor-info">
+                            <h3>Oldest Repair Date</h3>
+                            <p id="oldestRepairDate" class="factor-value date-value">...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Card 4: Newest Repair Date (Operational Indicator) -->
+                    <div class="factor-card repair-new-card">
+                        <div class="factor-icon-container"><i class="fas fa-tools"></i></div>
+                        <div class="factor-info">
+                            <h3>Newest Repair Date</h3>
+                            <p id="newestRepairDate" class="factor-value date-value">...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Weather Widget Mock (New) -->
+            <div id="weather-widget" class="card bg-gray-50 border border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3"><i class="fas fa-cloud-sun"></i> Weather Impact Monitor</h3>
+                <div class="flex justify-between items-center text-gray-600">
+                    <span id="weather-status" class="text-lg"><i class="fas fa-spinner fa-spin"></i> Fetching weather...</span>
+                    <span id="weather-temp" class="text-3xl font-bold text-indigo-700"></span>
+                </div>
+            </div>
+
+            <!-- Map Visualization -->
+            <div id="map" class="card">
+                <!-- Loading overlay state for user feedback -->
+                <div id="loadingOverlay">
+                    <i class="fas fa-spinner fa-spin fa-3x"></i> Loading AI Data...
+                    <p class="mt-4 text-sm font-semibold">Generating 100 simulated road segments...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- COLUMN 3: Interactive Segment Detail Panel (Right Sidebar) -->
+        <div id="segmentDetailPanel" class="sidebar card detail-panel-placeholder">
+            <h2><i class="fas fa-road"></i> Segment Detail</h2>
+            <div id="segmentDetailContent">
+                <!-- Initial placeholder message -->
+                <p class="placeholder-text">Click a road marker on the map to view real-time analysis, factors, and AI causal determination for that specific segment.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="legend-footer">
+        <h3 class="text-xl font-bold mb-3"><i class="fas fa-th-list"></i> Zone Legend</h3>
+        <div class="legend-items">
+            <div class="legend-item"><span class="legend-color green-color" style="background-color: #28a745;"></span> Green Zone (Good Condition: No Action Needed)</div>
+            <div class="legend-item"><span class="legend-color yellow-color" style="background-color: #ffc107;"></span> Yellow Zone (Deterioration Risk: Scheduled Maintenance)</div>
+            <div class="legend-item"><span class="legend-color red-color" style="background-color: #dc3545;"></span> Red Zone (Immediate Action Required: URGENT Repair)</div>
+        </div>
+    </div>
+    
+    <!--
+    ====================================================================================================
+    SECTION 2: INLINE SCRIPTING (JAVASCRIPT)
+    This section contains all application logic for map initialization, data fetching, and dynamic updates.
+    ====================================================================================================
+    -->
+    <script>
+        // --- CONSTANTS AND GLOBAL STATE ---
+        
+        let map;
+        let markerCluster;
+        let allSegmentsData = []; // Full, unfiltered dataset
+        let markers = []; // Array of current Google Maps Markers
+        
+        // Configuration for zone colors and map focus
+        const zoneColors = {
+            'GREEN': '#28a745', 
+            'YELLOW': '#ffc107',
+            'RED': '#dc3545'
+        };
+        
+        // Mock Location Data - EXPANDED COVERAGE FOR INDIA
+        const MOCK_LOCATIONS = {
+            'delhi': { lat: 28.6448, lng: 77.2167, name: 'New Delhi, Delhi NCR', zoom: 11, variance: 0.05 },
+            'mumbai': { lat: 19.0760, lng: 72.8777, name: 'Mumbai, Maharashtra', zoom: 11, variance: 0.07 },
+            'bengaluru': { lat: 12.9716, lng: 77.5946, name: 'Bengaluru, Karnataka', zoom: 11, variance: 0.06 },
+            'chennai': { lat: 13.0827, lng: 80.2707, name: 'Chennai, Tamil Nadu', zoom: 11, variance: 0.05 },
+            'kolkata': { lat: 22.5726, lng: 88.3639, name: 'Kolkata, West Bengal', zoom: 11, variance: 0.05 },
+            'hyderabad': { lat: 17.3850, lng: 78.4867, name: 'Hyderabad, Telangana', zoom: 11, variance: 0.06 },
+            'ahmedabad': { lat: 23.0225, lng: 72.5714, name: 'Ahmedabad, Gujarat', zoom: 11, variance: 0.05 },
+            'jaipur': { lat: 26.9124, lng: 75.7873, name: 'Jaipur, Rajasthan', zoom: 11, variance: 0.05 },
+            'kochi': { lat: 9.9312, lng: 76.2673, name: 'Kochi, Kerala', zoom: 12, variance: 0.04 },
+            'patna': { lat: 25.5941, lng: 85.1376, name: 'Patna, Bihar', zoom: 12, variance: 0.03 },
+            'lucknow': { lat: 26.8467, lng: 80.9462, name: 'Lucknow, Uttar Pradesh', zoom: 12, variance: 0.04 },
+            'bhubaneswar': { lat: 20.2961, lng: 85.8245, name: 'Bhubaneswar, Odisha', zoom: 12, variance: 0.04 },
+            'amritsar': { lat: 31.6340, lng: 74.8738, name: 'Amritsar, Punjab', zoom: 12, variance: 0.03 },
+            'gwalior': { lat: 26.2183, lng: 78.1828, name: 'Gwalior, Madhya Pradesh', zoom: 12, variance: 0.03 },
+            'default': { lat: 28.6448, lng: 77.2167, name: 'New Delhi, Delhi NCR', zoom: 11, variance: 0.05 }
+        };
+
+        const WEATHER_API_KEY = "FUqgtGuXcXH29r79l6qLbg==vJxb4tDrWVQX6Zxk"; // Provided by user
+
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Generates a random date string between two years ago and today.
+         * @returns {string} Date string (YYYY-MM-DD).
+         */
+        function getRandomDate() {
+            const today = new Date();
+            const twoYearsAgo = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate());
+            const randomTime = twoYearsAgo.getTime() + Math.random() * (today.getTime() - twoYearsAgo.getTime());
+            return new Date(randomTime).toISOString().split('T')[0];
+        }
+        
+        /**
+         * Calculates the age of a segment in days since its last repair.
+         * @param {string} dateString - Last repair date (YYYY-MM-DD).
+         * @returns {number} Age in days.
+         */
+        function calculateAgeInDays(dateString) {
+            const lastRepair = new Date(dateString);
+            const today = new Date();
+            const diffTime = Math.abs(today.getTime() - lastRepair.getTime());
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        /**
+         * Generates a large set of mock road segment data points.
+         * @param {object} center - Lat/Lng for the center of the data.
+         * @param {number} count - Number of segments to generate.
+         * @returns {Array<object>} Array of mock segment data.
+         */
+        function generateMockData(center, count = 100) {
+            const segments = [];
+            let totalRedZones = 0;
+            let totalTraffic = 0;
+            const zones = ['RED', 'YELLOW', 'GREEN'];
+            const names = ['Highway', 'Street', 'Avenue', 'Bypass', 'Inner Loop', 'Outer Ring'];
+
+            for (let i = 1; i <= count; i++) {
+                const zone = zones[Math.floor(Math.random() * zones.length)];
+                const trafficFactor = parseFloat((Math.random() * 0.8 + 0.2).toFixed(2)); // 0.2 to 1.0
+                const lastRepaired = getRandomDate();
+                const ageInDays = calculateAgeInDays(lastRepaired);
+
+                if (zone === 'RED') totalRedZones++;
+                totalTraffic += trafficFactor;
+
+                // Determine segment properties based on zone (to make the data realistic)
+                const segmentBase = {
+                    id: `S${1000 + i}`,
+                    name: `${names[i % names.length]} ${i}`,
+                    // Random location within the variance of the center
+                    lat: center.lat + (Math.random() - 0.5) * center.variance,
+                    lng: center.lng + (Math.random() - 0.5) * center.variance,
+                    zone: zone,
+                    last_repaired: lastRepaired,
+                    traffic_factor: trafficFactor,
+                    rain_mm: parseFloat((Math.random() * 10).toFixed(1)),
+                    age_days: ageInDays,
+                };
+
+                if (zone === 'RED') {
+                    // Make red zones older and higher traffic
+                    const year = new Date().getFullYear() - Math.floor(Math.random() * 2) - 1; // 1 to 3 years old
+                    const month = Math.floor(Math.random() * 12) + 1;
+                    segmentBase.last_repaired = `${year}-${String(month).padStart(2, '0')}-01`;
+                    segmentBase.traffic_factor = parseFloat((Math.random() * 0.2 + 0.8).toFixed(2)); // 0.8 to 1.0
+                    segmentBase.rain_mm = parseFloat((Math.random() * 20).toFixed(1));
+                    segmentBase.age_days = calculateAgeInDays(segmentBase.last_repaired);
+                }
+                
+                segments.push(segmentBase);
+            }
+
+            // Post-generation analysis for overview metrics
+            const repairDates = segments.map(s => new Date(s.last_repaired)).filter(d => !isNaN(d.getTime()));
+            const oldestDate = repairDates.length ? new Date(Math.min(...repairDates)) : new Date();
+            const newestDate = repairDates.length ? new Date(Math.max(...repairDates)) : new Date();
+
+            return {
+                segments: segments,
+                current_factors: {
+                    total_red_zones: totalRedZones,
+                    average_traffic_factor: (totalTraffic / count).toFixed(2),
+                    oldest_repair: oldestDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+                    newest_repair: newestDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+                }
+            };
+        }
+
+        // --- MAP AND DATA RENDERING FUNCTIONS ---
+        
+        /**
+         * Initializes the Google Map instance and sets up event listeners.
+         */
+        window.initMap = function() {
+            document.getElementById('map').classList.add('map-loading');
+            const defaultCenter = MOCK_LOCATIONS['default'];
+            
+            if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+                console.error("Google Maps failed to load.");
+                const mapDiv = document.getElementById('map');
+                mapDiv.style.backgroundColor = '#ffe6e6';
+                mapDiv.innerHTML = `<div style="padding: 50px; text-align: center; color: #dc3545;">
+                                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i> 
+                                    <strong>MAP DISPLAY FAILED:</strong> Google Maps could not initialize.
+                                    <br>Please check network connection.
+                                </div>`;
+                // Still load data to populate stats/cards
+                loadRealTimeData(defaultCenter); 
+                return;
+            }
+
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: defaultCenter.lat, lng: defaultCenter.lng },
+                zoom: defaultCenter.zoom,
+                mapId: "DEMO_MAP_ID", 
+                streetViewControl: false,
+                fullscreenControl: false,
+                mapTypeControl: true,
+            });
+            
+            // Attach event listeners after map is ready
+            attachEventListeners();
+
+            // Load initial data for the default location
+            loadRealTimeData(defaultCenter);
+        }
+        
+        /**
+         * Fetches mock data for the specified center and updates the entire dashboard.
+         * @param {object} locationConfig - The location to generate data around.
+         */
+        async function loadRealTimeData(locationConfig) {
+            document.getElementById('map').classList.add('map-loading');
+            document.getElementById('segmentDetailContent').innerHTML = '<p class="placeholder-text">Loading new data...</p>';
+            
+            // 1. Simulate data generation (Mock API call)
+            const mockData = await new Promise(resolve => {
+                setTimeout(() => resolve(generateMockData(locationConfig, 100)), 1000); // 1s delay
+            });
+
+            // 2. Store full data
+            allSegmentsData = mockData.segments;
+            
+            // 3. Update top-level metrics
+            updateOverviewMetrics(mockData.current_factors);
+            updateAIStatusBanner(mockData.current_factors.total_red_zones);
+            
+            // 4. Apply current filters and render map
+            applyFiltersAndRender();
+            
+            // 5. Update Weather Mock (Independent API call simulation)
+            updateWeatherMonitor(locationConfig.name);
+
+            document.getElementById('map').classList.remove('map-loading');
+        }
+
+        /**
+         * Clears all markers and polyline overlays from the map.
+         */
+        function clearMapOverlays() {
+            if (markerCluster) {
+                // Check if markerCluster is initialized before clearing
+                if (typeof MarkerClusterer !== 'undefined' && markerCluster instanceof MarkerClusterer) {
+                    markerCluster.clearMarkers();
+                } else {
+                    markers.forEach(marker => marker.setMap(null));
+                }
+            } else {
+                markers.forEach(marker => marker.setMap(null));
+            }
+            markers = [];
+        }
+
+        /**
+         * Applies the currently set filters to the segment data and updates the map and stats panels.
+         */
+        function applyFiltersAndRender() {
+            if (!map || !allSegmentsData.length) return;
+
+            const selectedZone = document.getElementById('zoneFilter').value;
+            const maxRepairAge = parseInt(document.getElementById('maxRepairAge').value);
+            const minTrafficLoad = parseFloat(document.getElementById('minTrafficLoad').value);
+            
+            // 1. Filter the data based on UI controls
+            const filteredSegments = allSegmentsData.filter(segment => {
+                const zoneMatch = selectedZone === 'ALL' || segment.zone === selectedZone;
+                const ageMatch = segment.age_days / 30.4375 <= maxRepairAge; // Convert days to months
+                const trafficMatch = segment.traffic_factor >= minTrafficLoad;
+                return zoneMatch && ageMatch && trafficMatch;
+            });
+            
+            // 2. Clear previous markers
+            clearMapOverlays();
+            
+            // 3. Render new markers and update aggregate stats
+            renderSegmentsOnMap(filteredSegments);
+            updateFilteredStats(filteredSegments);
+        }
+        
+        /**
+         * Renders the filtered road segments on the map using markers and clustering.
+         * Includes Google Maps link logic on click.
+         * @param {Array<object>} segments - The segments to render.
+         */
+        function renderSegmentsOnMap(segments) {
+            markers = segments.map(segment => {
+                const color = zoneColors[segment.zone] || '#999';
+                
+                const marker = new google.maps.Marker({
+                    position: { lat: segment.lat, lng: segment.lng },
+                    map: map,
+                    title: `${segment.name} (${segment.zone} Zone)`,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: color,
+                        fillOpacity: 0.9,
+                        strokeWeight: 1.5,
+                        strokeColor: '#333',
+                        scale: 8
+                    },
+                    segmentData: segment // Attach data directly to the marker object
+                });
+
+                // 1. Add click listener to update the detail panel
+                marker.addListener("click", () => {
+                    updateSegmentDetailPanel(segment);
+                    map.panTo(marker.getPosition());
+                });
+                
+                // 2. Add right-click listener (or another mechanism) to open Google Maps
+                // For simplicity and visibility, we'll make a DOUBLE-CLICK open Google Maps.
+                marker.addListener("dblclick", () => {
+                    const lat = segment.lat;
+                    const lng = segment.lng;
+                    // Construct the URL to search for the coordinates on Google Maps
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                    
+                    // Open in a new tab
+                    window.open(googleMapsUrl, '_blank');
+                    console.log(`Opening Google Maps for segment ${segment.id} at ${lat}, ${lng}`);
+                });
+
+                return marker;
+            });
+
+            // Initialize Marker Clustering
+            if (typeof MarkerClusterer === 'function') {
+                markerCluster = new MarkerClusterer(map, markers, {
+                    imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
+                    zoomOnClick: true,
+                    averageCenter: true
+                });
+            } else {
+                 markers.forEach(m => m.setMap(map));
+            }
+
+            console.log(`Rendered ${segments.length} markers.`);
+        }
+        
+        // --- UI UPDATE FUNCTIONS ---
+
+        /**
+         * Attaches all main application event listeners.
+         */
+        function attachEventListeners() {
+            document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+            document.getElementById('searchMapBtn').addEventListener('click', searchMap);
+        }
+
+        /**
+         * Updates the top-level overview cards (non-filtered).
+         * @param {object} factors - Overview data.
+         */
+        function updateOverviewMetrics(factors) {
+            document.getElementById('redZoneCount').textContent = factors.total_red_zones;
+            document.getElementById('avgTraffic').textContent = factors.average_traffic_factor;
+            document.getElementById('oldestRepairDate').textContent = factors.oldest_repair;
+            document.getElementById('newestRepairDate').textContent = factors.newest_repair;
+        }
+
+        /**
+         * Updates the real-time AI Status Banner.
+         * @param {number} redCount - The count of road segments currently in the Red Zone.
+         */
+        function updateAIStatusBanner(redCount) {
+            const banner = document.getElementById('aiStatusBanner');
+            const text = document.getElementById('aiStatusText');
+            const detail = document.getElementById('aiStatusDetail');
+            
+            banner.className = 'status-banner'; 
+            
+            if (redCount >= 5) {
+                banner.classList.add('status-red');
+                text.innerHTML = `<i class="fas fa-exclamation-circle"></i> <strong>CRITICAL ALERT:</strong> ${redCount} Red Zones detected.`;
+                detail.textContent = `Immediate maintenance required across multiple sectors.`;
+            } else if (redCount > 0) {
+                banner.classList.add('status-yellow');
+                text.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>HIGH RISK:</strong> ${redCount} Red Zone(s) require immediate attention.`;
+                detail.textContent = `Prioritize repair of critical segment(s).`;
+            } else {
+                banner.classList.add('status-green');
+                text.innerHTML = '<i class="fas fa-check-circle"></i> <strong>GREEN STATUS:</strong> Road network health is stable.';
+                detail.textContent = 'Focus on optimizing Yellow Zone maintenance schedule.';
+            }
+        }
+
+        /**
+         * Updates the interactive detail panel with information about a clicked segment.
+         * @param {object} segment - The full data object for the selected road segment.
+         */
+        function updateSegmentDetailPanel(segment) {
+            const panel = document.getElementById('segmentDetailContent');
+            const color = zoneColors[segment.zone];
+            
+            // --- AI Causal Analysis & Action Simulation ---
+            let causalFactor = 'Analysis pending...';
+            let action = 'Routine monitoring.';
+            let imgClass = 'placeholder-green'; 
+
+            if (segment.zone === 'RED') {
+                causalFactor = `High traffic (Index: ${segment.traffic_factor}) and excessive moisture ($${segment.rain_mm}mm$) determined to cause structural failure.`;
+                action = '<span class="action-required">URGENT: Initiate structural repair/rebuild immediately.</span>';
+                imgClass = 'placeholder-red';
+            } else if (segment.zone === 'YELLOW') {
+                causalFactor = `Age of infrastructure (${segment.age_days} days) combined with moderate traffic causing early surface wear.`;
+                action = 'Scheduled preventative maintenance (e.g., crack sealing) required this quarter.';
+                imgClass = 'placeholder-yellow';
+            } else if (segment.zone === 'GREEN') {
+                causalFactor = 'Stable condition. Last repaired recently. Low risk factors.';
+                action = 'Standard routine checks. Data review in 6 months.';
+                imgClass = 'placeholder-green';
+            }
+
+            // Construct the dynamic HTML content for the detail panel
+            panel.innerHTML = `
+                <!-- Mock Image/Map Visualization -->
+                <div id="segmentImagePlaceholder" class="${imgClass}">
+                    <i class="fas fa-map-marked-alt fa-2x"></i>
+                    <span class="placeholder-label">MOCK SATELLITE VIEW: ${segment.zone} ZONE</span>
+                    <button class="mt-3 p-2 bg-white text-gray-800 rounded-md shadow-lg text-sm font-bold" onclick="openGoogleMaps(${segment.lat}, ${segment.lng})">
+                         <i class="fas fa-external-link-alt"></i> OPEN IN GOOGLE MAPS (Double-Click Marker)
+                    </button>
+                </div>
+
+                <h3 style="color: ${color}; margin-bottom: 10px; font-size: 1.5em;">
+                    <i class="fas fa-circle" style="font-size: 0.6em;"></i> ${segment.name}
+                </h3>
+                <div class="segment-detail-item">
+                    <strong>Road ID / Zone Status:</strong>
+                    <span>${segment.id} / <span style="font-weight: bold; color: ${color}">${segment.zone}</span></span>
+                </div>
+                <div class="segment-detail-item">
+                    <strong>Last Repaired (Age):</strong>
+                    <span>${segment.last_repaired} (${(segment.age_days / 365).toFixed(1)} years)</span>
+                </div>
+                <div class="segment-detail-item">
+                    <strong>Current Traffic Load Index:</strong>
+                    <span>${segment.traffic_factor} (High Load)</span>
+                </div>
+                <div class="segment-detail-item">
+                    <strong>Recorded Rainfall (24hr):</strong>
+                    <span>${segment.rain_mm} mm</span>
+                </div>
+                <div class="segment-detail-item">
+                    <strong>AI Causal Factor Determination:</strong>
+                    <span style="font-size: 1em;">${causalFactor}</span>
+                </div>
+                <div class="segment-detail-item">
+                    <strong>Recommended Action:</strong>
+                    <span style="font-size: 1em;">${action}</span>
+                </div>
+            `;
+        }
+        
+        /**
+         * Updates the Aggregate Statistics Panel with metrics based on the currently filtered segments.
+         * @param {Array<object>} segments - The currently filtered segments.
+         */
+        function updateFilteredStats(segments) {
+            const total = segments.length;
+            let redCount = 0;
+            let yellowCount = 0;
+            let greenCount = 0;
+            let totalAgeDays = 0;
+
+            segments.forEach(s => {
+                if (s.zone === 'RED') redCount++;
+                else if (s.zone === 'YELLOW') yellowCount++;
+                else if (s.zone === 'GREEN') greenCount++;
+                totalAgeDays += s.age_days;
+            });
+            
+            const avgAge = total > 0 ? (totalAgeDays / total / 30.4375).toFixed(1) : 0; // Avg age in months
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-red').textContent = redCount;
+            document.getElementById('stat-yellow').textContent = yellowCount;
+            document.getElementById('stat-green').textContent = greenCount;
+            document.getElementById('stat-avg-age').textContent = total > 0 ? `${avgAge} months` : 'N/A';
+        }
+
+        /**
+         * Simulates fetching weather data and updates the Weather Impact Monitor widget.
+         * @param {string} locationName - The name of the location for which to mock weather.
+         */
+        async function updateWeatherMonitor(locationName) {
+             const widget = document.getElementById('weather-widget');
+             const statusSpan = document.getElementById('weather-status');
+             const tempSpan = document.getElementById('weather-temp');
+             
+             // Simulate network fetch delay
+             await new Promise(resolve => setTimeout(resolve, 800)); 
+             
+             // Mock Weather Data
+             const isRainy = Math.random() < 0.3;
+             const temp = Math.floor(Math.random() * 20 + 15); // 15 to 35 C
+             const condition = isRainy ? 'Heavy Rain / Flood Risk' : 'Clear Skies / High Temp';
+             const iconClass = isRainy ? 'fas fa-cloud-showers-heavy text-blue-600' : 'fas fa-sun text-yellow-500';
+
+             statusSpan.innerHTML = `<i class="${iconClass}"></i> ${condition}`;
+             tempSpan.textContent = `${temp}°C`;
+             widget.classList.remove('bg-gray-50', 'bg-blue-50', 'bg-yellow-50');
+             widget.classList.add(isRainy ? 'bg-blue-50' : 'bg-yellow-50');
+
+             console.log(`Weather updated for ${locationName}: ${condition}, ${temp}°C.`);
+        }
+        
+        // --- INTERACTION FUNCTIONS ---
+
+        /**
+         * Opens a new window to Google Maps centered on the given coordinates.
+         * This function is called from the Detail Panel button.
+         * @param {number} lat - Latitude.
+         * @param {number} lng - Longitude.
+         */
+        function openGoogleMaps(lat, lng) {
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            window.open(googleMapsUrl, '_blank');
+        }
+
+        /**
+         * Handles the 'Enter' key press on the search input.
+         * @param {KeyboardEvent} event - The keyboard event object.
+         */
+        function handleSearchKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                searchMap();
+            }
+        }
+
+        /**
+         * Simulates searching for a location, panning the map, and reloading data.
+         */
+        function searchMap() {
+            const cityStateInput = document.getElementById('cityStateInput');
+            const statusMessage = document.getElementById('statusMessage');
+            const query = cityStateInput.value.trim().toLowerCase();
+            
+            // Search MOCK_LOCATIONS based on the query string
+            let locationKey = Object.keys(MOCK_LOCATIONS).find(key => query.includes(key));
+            let locationConfig = MOCK_LOCATIONS[locationKey] || 
+                                 Object.values(MOCK_LOCATIONS).find(loc => query.includes(loc.name.toLowerCase().split(',')[0])) ||
+                                 MOCK_LOCATIONS['default'];
+            
+            statusMessage.textContent = `Searching for ${query}...`;
+            
+            if (map) {
+                const newCenter = new google.maps.LatLng(locationConfig.lat, locationConfig.lng);
+                map.panTo(newCenter);
+                map.setZoom(locationConfig.zoom); 
+                
+                // Update input field and status
+                cityStateInput.value = locationConfig.name; 
+                statusMessage.textContent = `Map centered on: ${locationConfig.name}. Reloading data...`;
+                
+                // Load new data set relevant to the new location center
+                loadRealTimeData(locationConfig);
+            } else {
+                statusMessage.textContent = `Map not yet initialized. Loading data for default location.`;
+                loadRealTimeData(locationConfig); 
+            }
+        }
+
+        /**
+         * Handles the request to generate the Excel report.
+         * Simulates file generation and download using a Blob.
+         */
+        function generateReport() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const cityState = document.getElementById('cityStateInput').value.trim() || 'Global';
+            
+            const statusMessage = document.getElementById('statusMessage');
+            const generateButton = document.getElementById('generateReportBtn');
+
+            if (!startDate || !endDate) {
+                statusMessage.textContent = "Please select a valid date range.";
+                return;
+            }
+
+            statusMessage.textContent = "Generating comprehensive report, please wait (simulated 2s)...";
+            generateButton.disabled = true;
+
+            // --- Mock Report Generation ---
+            setTimeout(() => {
+                try {
+                    const cleanCityState = cityState.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+                    // Header and data rows
+                    let csvContent = "Segment ID,Road Name,Zone Status,Traffic Load,Rainfall (mm),Last Repaired (YYYY-MM-DD),Repair Age (Days),Location Context\n";
+                    
+                    // Add all current data segments to the report
+                    allSegmentsData.forEach(s => {
+                        csvContent += `${s.id},"${s.name}",${s.zone},${s.traffic_factor},${s.rain_mm},${s.last_repaired},${s.age_days},"${cityState}"\n`;
+                    });
+
+                    // Add summary footer
+                    csvContent += `\n\n# Summary: Total Segments: ${allSegmentsData.length}\n`;
+                    csvContent += `# Filtered By Time Range: ${startDate} to ${endDate}\n`;
+                    csvContent += `# Location: ${cityState}`;
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const filename = `RoadSense_Report_${cleanCityState}_${startDate}.csv`;
+
+                    // Trigger the download
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    statusMessage.textContent = `Report for ${cityState} successfully SIMULATED and downloaded (CSV)!`;
+                } catch (error) {
+                    statusMessage.textContent = `Error during report simulation: ${error.message}`;
+                    console.error('Error generating report simulation:', error);
+                } finally {
+                    generateButton.disabled = false;
+                }
+            }, 2000); // 2 second simulation delay
+        }
+        
+        // --- Fallback for MarkerClusterer loading (for robustness) ---
+        // We include a simple mock definition of MarkerClusterer here in case the CDN fails.
+        if (typeof MarkerClusterer === 'undefined') {
+            function MarkerClusterer(map, markers, options) {
+                console.warn("MarkerClusterer not found. Markers rendered without clustering.");
+                // Mock implementation: just render markers normally
+                this.clearMarkers = () => markers.forEach(m => m.setMap(null));
+                markers.forEach(m => m.setMap(map));
+                return this;
+            }
+        }
+        
+    </script>
+    
+    <!-- Load MarkerClusterer Library for enhanced visualization -->
+    <script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js" defer></script>
+</body>
+</html>
+
+

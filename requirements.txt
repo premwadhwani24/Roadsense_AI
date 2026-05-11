@@ -1,0 +1,5 @@
+flask
+werkzeug
+tensorflow==2.14.0  # optional; remove if you don't want heavy deps in the virtualenv
+numpy
+requests
