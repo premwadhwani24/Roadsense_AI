@@ -38,9 +38,9 @@ except:
     pd = None
 
 # Configuration
-GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "AIzaSyAB_78cxWOzcKE_ezj6dm9Y77CxwzetdPY")
-OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "FUqgtGuXcXH29r79l6qLbg==vJxb4tDrWVQX6Zxk")
-TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "4f299a89-0229-454a-b97f-7fa4e3198c7f")
+GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
+OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
 USE_MOCK_IF_NO_KEYS = True
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
