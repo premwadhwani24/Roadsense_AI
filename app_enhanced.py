@@ -59,6 +59,11 @@ jwt = setup_auth(app)
 # Initialize prediction engine
 prediction_engine = RoadPredictionEngine()
 
+
+def error_response(message: str, status_code: int = 400):
+    """Utility function for standardized error responses"""
+    return jsonify({"success": False, "error": message}), status_code
+
 # Sample road data
 ROAD_SEGMENTS: Dict[str, Dict[str, Any]] = {
     "R001": {"name": "NH-52 Segment A", "coords": (26.2183, 78.1828), "state": "Madhya Pradesh", 
@@ -774,6 +779,21 @@ def health():
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
         "database": "connected"
+    }), 200
+
+@app.route("/api/help", methods=["GET"])
+def get_help():
+    """API Help endpoint providing overview of available routes"""
+    return jsonify({
+        "name": "RoadSense AI API",
+        "version": "1.0.0",
+        "info": "Comprehensive road infrastructure management platform",
+        "endpoints": {
+            "auth": ["/api/auth/login", "/api/auth/register", "/api/auth/user"],
+            "alerts": ["/api/alerts (GET/POST)", "/api/alerts/<id>/resolve (PUT)"],
+            "roads": ["/api/roads/status", "/api/locations"],
+            "predictions": ["/api/predictions/deterioration/<id>", "/api/predictions/accident-risk/<id>"]
+        }
     }), 200
 
 @app.route("/api/locations", methods=["GET"])
