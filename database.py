@@ -210,6 +210,65 @@ def init_database():
         )
     ''')
     
+    
+    # Real-Time Detected Defects (CV / Dashcam / Ingest)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS realtime_defects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            defect_code TEXT NOT NULL,
+            class_name TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            confidence REAL NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            road_id TEXT,
+            image_url TEXT,
+            vehicle_id TEXT DEFAULT 'VEH-IN-01',
+            data_source TEXT DEFAULT 'LIVE_CV_STREAM',
+            captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Live Sensor Telemetry (Vibration, Accelerometer G-Force, GPS Speed)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sensor_telemetry_live (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id TEXT NOT NULL,
+            road_id TEXT,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            speed_kmh REAL DEFAULT 40.0,
+            g_force REAL DEFAULT 1.0,
+            vibration_index REAL DEFAULT 0.5,
+            data_source TEXT DEFAULT 'LIVE_SENSOR',
+            recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Weather Cache
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS weather_cache (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            city TEXT,
+            latitude REAL,
+            longitude REAL,
+            weather_json TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Traffic Flow Readings
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS traffic_readings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            road_id TEXT,
+            congestion_pct REAL,
+            speed_kmh REAL,
+            traffic_level TEXT,
+            recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     conn.commit()
     conn.close()
     
@@ -531,6 +590,23 @@ class DatabaseManager:
     # ROADBOUNCE DATA OPERATIONS
     # =========================================================================
     @staticmethod
+
+    @staticmethod
+    def get_roadbounce_survey_by_id(road_id: str) -> Optional[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM roadbounce_surveys WHERE road_id = ?", (road_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_roadbounce_surveys() -> List[Dict[str, Any]]:
+        return DatabaseManager.get_roadbounce_roads()
+
     def get_roadbounce_roads(city: Optional[str] = None, state: Optional[str] = None, 
                              status: Optional[str] = None, min_iri: Optional[float] = None,
                              search: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -700,6 +776,120 @@ class DatabaseManager:
                 "remediated_roads_count": remediated,
                 "preventative_cost_saved_inr": remediated * 125000.0 # Estimated savings per early yellow->green fix
             }
+        finally:
+            conn.close()
+
+
+    @staticmethod
+    def add_realtime_defect(defect_code: str, class_name: str, severity: str, confidence: float,
+                            latitude: float, longitude: float, road_id: str = None, 
+                            image_url: str = None, vehicle_id: str = 'VEH-IN-01', 
+                            data_source: str = 'LIVE_CV_STREAM') -> int:
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO realtime_defects (defect_code, class_name, severity, confidence, latitude, longitude, road_id, image_url, vehicle_id, data_source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (defect_code, class_name, severity, confidence, latitude, longitude, road_id, image_url, vehicle_id, data_source))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_realtime_defects(lat: float = None, lng: float = None, radius_km: float = 25.0, 
+                             road_id: str = None, limit: int = 50) -> List[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            if road_id:
+                cursor.execute("SELECT * FROM realtime_defects WHERE road_id = ? ORDER BY captured_at DESC LIMIT ?", (road_id, limit))
+                return [dict(row) for row in cursor.fetchall()]
+            
+            cursor.execute("SELECT * FROM realtime_defects ORDER BY captured_at DESC LIMIT ?", (limit * 2,))
+            rows = [dict(row) for row in cursor.fetchall()]
+            
+            if lat is not None and lng is not None:
+                import math
+                def dist(lat1, lon1, lat2, lon2):
+                    R = 6371.0
+                    dlat = math.radians(lat2 - lat1)
+                    dlon = math.radians(lon2 - lon1)
+                    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+                    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+                
+                filtered = []
+                for r in rows:
+                    d = dist(lat, lng, r['latitude'], r['longitude'])
+                    if d <= radius_km:
+                        r['distance_km'] = round(d, 2)
+                        filtered.append(r)
+                return sorted(filtered, key=lambda x: x.get('distance_km', 0))[:limit]
+            
+            return rows[:limit]
+        finally:
+            conn.close()
+
+    @staticmethod
+    def add_live_telemetry(vehicle_id: str, latitude: float, longitude: float, 
+                           speed_kmh: float = 40.0, g_force: float = 1.0, 
+                           vibration_index: float = 0.5, road_id: str = None, 
+                           data_source: str = 'LIVE_SENSOR') -> int:
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO sensor_telemetry_live (vehicle_id, road_id, latitude, longitude, speed_kmh, g_force, vibration_index, data_source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (vehicle_id, road_id, latitude, longitude, speed_kmh, g_force, vibration_index, data_source))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_latest_telemetry(road_id: str = None, limit: int = 10) -> List[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            if road_id:
+                cursor.execute("SELECT * FROM sensor_telemetry_live WHERE road_id = ? ORDER BY recorded_at DESC LIMIT ?", (road_id, limit))
+            else:
+                cursor.execute("SELECT * FROM sensor_telemetry_live ORDER BY recorded_at DESC LIMIT ?", (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_nearby_roadbounce_roads(lat: float, lng: float, radius_km: float = 50.0) -> List[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM roadbounce_surveys")
+            roads = [dict(r) for r in cursor.fetchall()]
+            
+            import math
+            def dist(lat1, lon1, lat2, lon2):
+                R = 6371.0
+                dlat = math.radians(lat2 - lat1)
+                dlon = math.radians(lon2 - lon1)
+                a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+                return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+            nearby = []
+            for road in roads:
+                d = dist(lat, lng, road['latitude'], road['longitude'])
+                if d <= radius_km:
+                    road['distance_km'] = round(d, 2)
+                    nearby.append(road)
+            
+            # Sort by distance
+            nearby.sort(key=lambda x: x['distance_km'])
+            return nearby
         finally:
             conn.close()
 

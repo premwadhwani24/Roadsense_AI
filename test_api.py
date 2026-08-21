@@ -670,6 +670,198 @@ def test_rdd_detect():
         print(f"❌ Error: {e}")
         return False
 
+
+def test_irrdd_stats():
+    """Test 30: IRRDD (Iran Road Damage Dataset 2022) Metrics Endpoint"""
+    print_section("Test 30: IRRDD Dataset Metrics")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/rdd/irrdd")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ IRRDD dataset metrics fetch successful")
+            print(f"   Title: {data.get('title')}")
+            print(f"   Total Images: {data.get('total_images')}, Format: {data.get('annotation_format')}")
+            print(f"   Classes: {data.get('damage_classes')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_location_search():
+    """Test 31: Real-Time Google Maps / OSM Location Search Autocomplete"""
+    print_section("Test 31: Real-Time Location Search")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/realtime/location-search?q=Mumbai")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Location search test successful")
+            print(f"   Query: '{data.get('query')}', Found: {data.get('count')} locations")
+            if data.get('results'):
+                print(f"   First match: {data['results'][0]['display_name']} ({data['results'][0]['source']})")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_nearby_roads():
+    """Test 32: Real-Time Fused Nearby Roads Query"""
+    print_section("Test 32: Real-Time Nearby Roads Data Fusion")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/realtime/nearby-roads?lat=19.0760&lng=72.8777&radius_km=50")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Real-time nearby roads query successful")
+            print(f"   Roads Found: {data.get('total_roads_found')}")
+            if data.get('roads'):
+                r0 = data['roads'][0]
+                print(f"   Sample Road: {r0['road_name']} -> Condition: {r0['condition']} ({r0['health_score']}/100)")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_road_health():
+    """Test 33: Multi-Modal Real-Time Road Health Index"""
+    print_section("Test 33: Real-Time Road Health Index")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/realtime/road-health/RB-MUM-01")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Real-time road health fetch successful")
+            print(f"   Road: {data.get('road_name')}")
+            print(f"   Health Score: {data.get('health_score')}/100, Condition: {data.get('condition')}")
+            print(f"   Provenance: {data.get('data_provenance')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_frame_ingest():
+    """Test 34: Real-Time Vehicle-Camera Frame Ingestion & CV Defect Detection"""
+    print_section("Test 34: Real-Time CV Frame Ingest")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/realtime/ingest-frame",
+            json={
+                "image_name": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg",
+                "latitude": 19.0760,
+                "longitude": 72.8777,
+                "road_id": "RB-MUM-01",
+                "vehicle_id": "SURVEY-VEH-04"
+            }
+        )
+        if response.status_code == 201:
+            data = response.json()
+            print("✅ Vehicle camera frame ingested and processed successfully")
+            print(f"   Defects Detected: {data.get('frame_result', {}).get('detected_defects_count')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_defects_query():
+    """Test 35: Real-Time Defect Proximity Query"""
+    print_section("Test 35: Real-Time Defect Proximity Query")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/realtime/defects?lat=19.0760&lng=72.8777&radius_km=25")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Real-time defects query successful")
+            print(f"   Total Defects: {data.get('total_defects')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_sensor_ingest():
+    """Test 36: Real-Time Vehicle Accelerometer / Vibration Sensor Ingest"""
+    print_section("Test 36: Live Sensor Ingest")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/realtime/sensor-ingest",
+            json={
+                "vehicle_id": "SURVEY-VEH-04",
+                "latitude": 19.0760,
+                "longitude": 72.8777,
+                "speed_kmh": 48.5,
+                "g_force": 0.45,
+                "vibration_index": 0.35,
+                "road_id": "RB-MUM-01"
+            }
+        )
+        if response.status_code == 201:
+            data = response.json()
+            print("✅ Live sensor telemetry logged successfully")
+            print(f"   Telemetry ID: {data.get('telemetry_id')}, Anomaly: {data.get('anomaly_detected')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_weather_traffic():
+    """Test 37: Real-Time Environmental Weather & TomTom Traffic Load"""
+    print_section("Test 37: Real-Time Weather & Traffic")
+    try:
+        w_resp = requests.get(f"{BASE_URL}/api/v3/realtime/weather?city=Mumbai")
+        t_resp = requests.get(f"{BASE_URL}/api/v3/realtime/traffic?lat=19.0760&lng=72.8777")
+        if w_resp.status_code == 200 and t_resp.status_code == 200:
+            w_data = w_resp.json()
+            t_data = t_resp.json()
+            print("✅ Weather & Traffic queries successful")
+            print(f"   Weather: {w_data.get('temperature_c')}°C, Rain: {w_data.get('rainfall_last_3h_mm')}mm ({w_data.get('source')})")
+            print(f"   Traffic: {t_data.get('current_speed_kmh')} km/h, Congestion: {t_data.get('congestion_pct')}% ({t_data.get('source')})")
+            return True
+        else:
+            print(f"❌ Failed: Weather {w_resp.status_code}, Traffic {t_resp.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_realtime_predictions_recommendations():
+    """Test 38: 7/30/60/90 Day Deterioration Prediction & AI Recommendation"""
+    print_section("Test 38: Deterioration Prediction & AI Recommendation")
+    try:
+        p_resp = requests.get(f"{BASE_URL}/api/v3/realtime/predictions/RB-DEL-03")
+        r_resp = requests.get(f"{BASE_URL}/api/v3/realtime/recommend/RB-DEL-03")
+        if p_resp.status_code == 200 and r_resp.status_code == 200:
+            p_data = p_resp.json().get('predictions', {})
+            r_data = r_resp.json()
+            print("✅ Prediction & Recommendation queries successful")
+            print(f"   30-Day Risk: {p_data.get('failure_risk_percentage', {}).get('day_30')}%")
+            print(f"   Remaining Useful Life: {p_data.get('remaining_useful_life_months')} months")
+            print(f"   AI Priority: {r_data.get('maintenance_priority')}")
+            print(f"   Repair Type: {r_data.get('suggested_repair_type')}")
+            print(f"   IRC Standards: {r_data.get('applicable_irc_standards')}")
+            return True
+        else:
+            print(f"❌ Failed: Preds {p_resp.status_code}, Rec {r_resp.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -721,6 +913,17 @@ def run_all_tests():
     results.append(("RDD2022 Dataset Statistics", test_rdd_dataset_stats()))
     results.append(("RDD2022 Class Taxonomy", test_rdd_classes()))
     results.append(("RDD2022 Object Detection Inference", test_rdd_detect()))
+
+    results.append(("IRRDD Dataset Statistics", test_irrdd_stats()))
+    results.append(("Real-Time Location Search", test_realtime_location_search()))
+    results.append(("Real-Time Nearby Roads Data Fusion", test_realtime_nearby_roads()))
+    results.append(("Real-Time Road Health Index", test_realtime_road_health()))
+    results.append(("Real-Time CV Frame Ingestion", test_realtime_frame_ingest()))
+    results.append(("Real-Time Defect Proximity Query", test_realtime_defects_query()))
+    results.append(("Live Sensor Telemetry Ingestion", test_realtime_sensor_ingest()))
+    results.append(("Real-Time Weather & Traffic", test_realtime_weather_traffic()))
+    results.append(("Deterioration Prediction & AI Recommendation", test_realtime_predictions_recommendations()))
+
     
     # Print summary
     print_section("Test Summary")
