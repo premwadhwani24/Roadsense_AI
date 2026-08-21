@@ -424,6 +424,82 @@ def test_system_integrity():
         print(f"❌ Error: {e}")
         return False
 
+def test_irc_compliance():
+    """Test 18: RoadAthena IRC Compliance & CA Clause Check"""
+    print_section("Test 18: RoadAthena IRC Compliance Check")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/compliance/irc-check",
+            json={
+                "pothole_depth_mm": 18.0,
+                "crack_width_mm": 2.2,
+                "marking_retroreflectivity": 180.0
+            }
+        )
+        if response.status_code == 200:
+            print("✅ IRC compliance test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_rams_asset_inventory():
+    """Test 19: RoadAthena RAMS 300+ Asset Categories Inventory"""
+    print_section("Test 19: RoadAthena RAMS Asset Inventory")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/assets/inventory")
+        if response.status_code == 200:
+            print("✅ RAMS inventory test successful")
+            data = response.json()
+            print(f"   Total Categories Tracked: {data.get('total_categories_tracked')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_domestic_presence():
+    """Test 20: RoadAthena Domestic Road Survey Reach"""
+    print_section("Test 20: RoadAthena Domestic State Reach")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/presence/domestic")
+        if response.status_code == 200:
+            print("✅ Domestic presence test successful")
+            data = response.json()
+            print(f"   Total States: {data.get('total_states')}, Surveyed KM: {data.get('total_surveyed_km')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_irc_assistant_chat():
+    """Test 21: RoadAthena IRC AI Assistant Chatbot"""
+    print_section("Test 21: RoadAthena IRC AI Assistant Chatbot")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/chat/irc-assistant",
+            json={"query": "What is IRC standard for pothole repair?"}
+        )
+        if response.status_code == 200:
+            print("✅ IRC AI Assistant chatbot test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -463,6 +539,10 @@ def run_all_tests():
     results.append(("Adaptive Traffic Signals", test_adaptive_traffic_signals()))
     results.append(("Hazard Rerouting", test_hazard_reroute()))
     results.append(("System Integrity", test_system_integrity()))
+    results.append(("IRC Compliance Check", test_irc_compliance()))
+    results.append(("RAMS Asset Inventory", test_rams_asset_inventory()))
+    results.append(("Domestic Presence", test_domestic_presence()))
+    results.append(("IRC AI Assistant", test_irc_assistant_chat()))
     
     # Print summary
     print_section("Test Summary")
@@ -488,3 +568,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nTests cancelled by user")
         sys.exit(0)
+

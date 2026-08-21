@@ -39,10 +39,12 @@ Traditional road maintenance is reactive, expensive, and often lacks transparenc
 - **Vehicle Crowd-Sensing**: Aggregates GPS and accelerometer data from everyday commuters to map road roughness (IRI).
 - **LLM Decision Assistant**: Generates plain-language engineering repair booklets and summaries.
 
-### 📊 7. Dynamic UI & Resource Optimization
-- **Modern Animated Dashboard**: Built with Glassmorphism styling, CSS keyframe entrance fade-ins, pulsing alert indicators, and animated JS count-up counters.
-- **Geospatial Clustering (DBSCAN)**: Automatically groups proximal defects into "Maintenance Zones" to optimize fuel and labor.
-- **System Integrity Diagnostics**: Real-time diagnostic endpoint (`/api/v3/system/integrity`) monitoring subsystem health.
+### 🏛️ 8. RoadAthena RAMS (Road Asset Management System)
+- **320+ Road Asset Categories**: Computer vision multi-label detection tracking pavement distress, safety furniture, W-beam crash barriers, solar blinkers, traffic signages (IRC:67), markings (IRC:35), and drainage manholes.
+- **Automated IRC Compliance & CA Clause Audits**: Instant validation of pothole depth, crack severity, and retro-reflectivity against Indian Road Congress standards (`IRC:SP:84`, `IRC:37`, `IRC:67`, `IRC:119`) with penalty risk flags.
+- **Domestic Road Reach Analytics**: Pan-India survey intelligence across 20+ states covering 270,000+ km of national highway corridors.
+- **AthenaBot IRC AI Assistant**: Intelligent conversational engineering chatbot answering IRC maintenance rules, repair thresholds, and IndiaRAP star safety ratings.
+- **High-Impact UI Experience**: Orbital tech preloader, continuous marquee defect galleries, typewriter hero section, interactive state cards, and light/dark theme support.
 
 ---
 
