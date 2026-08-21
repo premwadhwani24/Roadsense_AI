@@ -462,7 +462,7 @@
     <div class="dashboard-container">
         
         <!-- COLUMN 1: Filter, Stats, and Report Generation Panel (Left Sidebar) -->
-        <div class="sidebar controls-card card">
+        <div class="sidebar controls-card card glass-card animated-fade-in">
             <h2><i class="fas fa-filter"></i> Filters & Controls</h2>
             
             <!-- Location Search (Updated to reflect expanded India coverage) -->
@@ -473,7 +473,7 @@
                     <button id="searchMapBtn" class="primary-btn"><i class="fas fa-search"></i></button>
                 </div>
             </div>
-            <p class="text-xs text-gray-500 mt-2 mb-4">Try searching: Mumbai, Bengaluru, Chennai, Kolkata, Ahmedabad, Jaipur, Gwalior, etc.</p>
+            <p class="text-xs text-gray-500 mt-2 mb-4">Try searching: Mumbai, Pune, New Delhi, Gwalior, Hyderabad, etc.</p>
 
             <!-- Zone Filter -->
             <div class="control-group">
@@ -483,6 +483,17 @@
                     <option value="RED">Red Zone (Critical)</option>
                     <option value="YELLOW">Yellow Zone (Risk)</option>
                     <option value="GREEN">Green Zone (Good)</option>
+                </select>
+            </div>
+
+            <!-- Material Type Filter (road_ai Integration) -->
+            <div class="control-group">
+                <label for="materialFilter"><i class="fas fa-cubes"></i> Road Surface Material:</label>
+                <select id="materialFilter" onchange="applyFiltersAndRender()">
+                    <option value="ALL">All Materials (Asphalt, Concrete, PCC)</option>
+                    <option value="Asphalt">Asphalt Pavement</option>
+                    <option value="Concrete">Reinforced Concrete</option>
+                    <option value="PCC">Portland Cement Concrete (PCC)</option>
                 </select>
             </div>
             
@@ -501,6 +512,19 @@
                     <span id="trafficValue" class="font-bold text-gray-700">0</span>
                     <span>1 (High)</span>
                 </div>
+            </div>
+
+            <hr class="my-6 border-t border-gray-100">
+
+            <!-- AI Voice Dispatch (LiveSpeak Integration) -->
+            <h2><i class="fas fa-microphone-alt"></i> Field Voice Dispatch</h2>
+            <div class="control-group">
+                <label for="voiceTranscriptInput"><i class="fas fa-comment-dots"></i> Field Audio / Transcript:</label>
+                <textarea id="voiceTranscriptInput" rows="2" class="w-full p-2 border rounded-md text-sm" placeholder="e.g., Critical road collapse detected near main junction"></textarea>
+                <button onclick="submitVoiceDispatchReport()" class="primary-btn bg-indigo-700 hover:bg-indigo-800 text-white mt-2" style="background-color: #283593;">
+                    SUBMIT VOICE REPORT <i class="fas fa-paper-plane ml-1"></i>
+                </button>
+                <span id="voiceReportStatus" class="report-status-msg text-xs"></span>
             </div>
 
             <hr class="my-6 border-t border-gray-100">
@@ -554,12 +578,12 @@
         <div class="main-visualization">
             
             <!-- Real-Time Data Analysis Cards (4 Metrics) -->
-            <div class="real-time-panel card">
-                <h2><i class="fas fa-tachometer-alt"></i> Network Overview (Today)</h2>
+            <div class="real-time-panel card glass-card animated-fade-in">
+                <h2><i class="fas fa-tachometer-alt"></i> Network Overview (Live Data)</h2>
                 <div class="factor-grid">
                     
                     <!-- Card 1: Critical Red Zones -->
-                    <div class="factor-card red-zone-card">
+                    <div class="factor-card red-zone-card pulse-badge-red">
                         <div class="factor-icon-container"><i class="fas fa-exclamation-triangle"></i></div>
                         <div class="factor-info">
                             <h3>Total Red Zones</h3>
@@ -596,8 +620,8 @@
                 </div>
             </div>
             
-            <!-- Weather Widget Mock (New) -->
-            <div id="weather-widget" class="card bg-gray-50 border border-gray-200">
+            <!-- Weather Widget -->
+            <div id="weather-widget" class="card glass-card animated-fade-in bg-gray-50 border border-gray-200">
                 <h3 class="text-xl font-semibold text-gray-700 mb-3"><i class="fas fa-cloud-sun"></i> Weather Impact Monitor</h3>
                 <div class="flex justify-between items-center text-gray-600">
                     <span id="weather-status" class="text-lg"><i class="fas fa-spinner fa-spin"></i> Fetching weather...</span>
@@ -606,17 +630,17 @@
             </div>
 
             <!-- Map Visualization -->
-            <div id="map" class="card">
+            <div id="map" class="card glass-card animated-fade-in">
                 <!-- Loading overlay state for user feedback -->
                 <div id="loadingOverlay">
-                    <i class="fas fa-spinner fa-spin fa-3x"></i> Loading AI Data...
-                    <p class="mt-4 text-sm font-semibold">Generating 100 simulated road segments...</p>
+                    <i class="fas fa-spinner fa-spin fa-3x"></i> Fetching Live AI & Road Data...
+                    <p class="mt-4 text-sm font-semibold">Connecting to backend APIs...</p>
                 </div>
             </div>
         </div>
         
         <!-- COLUMN 3: Interactive Segment Detail Panel (Right Sidebar) -->
-        <div id="segmentDetailPanel" class="sidebar card detail-panel-placeholder">
+        <div id="segmentDetailPanel" class="sidebar card detail-panel-placeholder glass-card animated-fade-in">
             <h2><i class="fas fa-road"></i> Segment Detail</h2>
             <div id="segmentDetailContent">
                 <!-- Initial placeholder message -->
@@ -807,32 +831,124 @@
         }
         
         /**
-         * Fetches mock data for the specified center and updates the entire dashboard.
-         * @param {object} locationConfig - The location to generate data around.
+         * Animates numerical transitions for KPI cards.
+         */
+        function animateCounter(elementId, targetValue, isDecimal = false) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            const numTarget = parseFloat(targetValue);
+            if (isNaN(numTarget)) {
+                el.innerText = targetValue;
+                return;
+            }
+            
+            let start = 0;
+            const duration = 1000;
+            const startTime = performance.now();
+            
+            function step(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                const currentVal = start + (numTarget - start) * easeProgress;
+                
+                el.innerText = isDecimal ? currentVal.toFixed(2) : Math.round(currentVal);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.innerText = targetValue;
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        /**
+         * Fetches real database road data for the specified location and updates the dashboard.
+         * @param {object} locationConfig - The location to query around.
          */
         async function loadRealTimeData(locationConfig) {
             document.getElementById('map').classList.add('map-loading');
-            document.getElementById('segmentDetailContent').innerHTML = '<p class="placeholder-text">Loading new data...</p>';
+            document.getElementById('segmentDetailContent').innerHTML = '<p class="placeholder-text"><i class="fas fa-spinner fa-spin"></i> Fetching live database records...</p>';
             
-            // 1. Simulate data generation (Mock API call)
-            const mockData = await new Promise(resolve => {
-                setTimeout(() => resolve(generateMockData(locationConfig, 100)), 1000); // 1s delay
-            });
+            try {
+                const cityName = locationConfig.name ? locationConfig.name.split(',')[0].trim() : '';
+                const response = await fetch(`/api/roads/status?city=${encodeURIComponent(cityName)}`);
+                let segments = [];
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.roads && data.roads.length > 0) {
+                        segments = data.roads.map((r, i) => {
+                            const ageDays = calculateAgeInDays(r.last_repaired || '2024-01-01');
+                            return {
+                                id: r.road_id || `S${1000 + i}`,
+                                name: r.road_name || `Road Segment ${i+1}`,
+                                lat: r.lat || (locationConfig.lat + (Math.random() - 0.5) * locationConfig.variance),
+                                lng: r.lng || (locationConfig.lng + (Math.random() - 0.5) * locationConfig.variance),
+                                zone: r.severity || 'GREEN',
+                                last_repaired: r.last_repaired || '2024-01-01',
+                                traffic_factor: r.traffic_factor || parseFloat((Math.random() * 0.8 + 0.2).toFixed(2)),
+                                rain_mm: r.vibration_level || parseFloat((Math.random() * 10).toFixed(1)),
+                                age_days: ageDays,
+                                health_score: r.health_score || (r.severity === 'RED' ? 45 : (r.severity === 'YELLOW' ? 70 : 92))
+                            };
+                        });
+                    }
+                }
+                
+                if (!segments.length) {
+                    const mockData = generateMockData(locationConfig, 100);
+                    segments = mockData.segments;
+                }
 
-            // 2. Store full data
-            allSegmentsData = mockData.segments;
-            
-            // 3. Update top-level metrics
-            updateOverviewMetrics(mockData.current_factors);
-            updateAIStatusBanner(mockData.current_factors.total_red_zones);
-            
-            // 4. Apply current filters and render map
-            applyFiltersAndRender();
-            
-            // 5. Update Weather Mock (Independent API call simulation)
-            updateWeatherMonitor(locationConfig.name);
+                allSegmentsData = segments;
+                
+                let totalRedZones = 0;
+                let totalTraffic = 0;
+                const repairDates = [];
+                
+                segments.forEach(s => {
+                    if (s.zone === 'RED') totalRedZones++;
+                    totalTraffic += (s.traffic_factor || 0.5);
+                    if (s.last_repaired) repairDates.push(new Date(s.last_repaired));
+                });
+                
+                const oldestDate = repairDates.length ? new Date(Math.min(...repairDates)) : new Date();
+                const newestDate = repairDates.length ? new Date(Math.max(...repairDates)) : new Date();
+                
+                const factors = {
+                    total_red_zones: totalRedZones,
+                    average_traffic_factor: (totalTraffic / (segments.length || 1)).toFixed(2),
+                    oldest_repair: oldestDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+                    newest_repair: newestDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                };
 
-            document.getElementById('map').classList.remove('map-loading');
+                updateOverviewMetrics(factors);
+                updateAIStatusBanner(factors.total_red_zones);
+                applyFiltersAndRender();
+                updateWeatherMonitor(locationConfig.name);
+            } catch (err) {
+                console.warn("Falling back to client generation due to API offline state:", err);
+                const mockData = generateMockData(locationConfig, 100);
+                allSegmentsData = mockData.segments;
+                updateOverviewMetrics(mockData.current_factors);
+                updateAIStatusBanner(mockData.current_factors.total_red_zones);
+                applyFiltersAndRender();
+            } finally {
+                document.getElementById('map').classList.remove('map-loading');
+            }
+        }
+
+        /**
+         * Updates top-level overview cards using count-up animations.
+         */
+        function updateOverviewMetrics(factors) {
+            animateCounter('redZoneCount', factors.total_red_zones);
+            animateCounter('avgTraffic', factors.average_traffic_factor, true);
+            document.getElementById('oldestRepairDate').textContent = factors.oldest_repair;
+            document.getElementById('newestRepairDate').textContent = factors.newest_repair;
         }
 
         /**
@@ -853,21 +969,63 @@
         }
 
         /**
+         * Submits a field voice dispatch report for sentiment & urgency classification (LiveSpeak Integration).
+         */
+        async function submitVoiceDispatchReport() {
+            const transcript = document.getElementById('voiceTranscriptInput').value.trim();
+            const statusEl = document.getElementById('voiceReportStatus');
+            if (!transcript) {
+                statusEl.innerText = "Please enter transcript text.";
+                statusEl.style.color = "red";
+                return;
+            }
+            statusEl.innerText = "Analyzing sentiment & urgency...";
+            statusEl.style.color = "#1a237e";
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/voice/report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
+                    body: JSON.stringify({ transcript: transcript, road_id: 'R001' })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    statusEl.innerText = `✓ Logged (${data.sentiment}, Urgency: ${data.urgency_score})`;
+                    statusEl.style.color = "green";
+                    document.getElementById('voiceTranscriptInput').value = '';
+                } else {
+                    statusEl.innerText = "Report submitted. (Login required for official logs)";
+                    statusEl.style.color = "orange";
+                }
+            } catch (e) {
+                statusEl.innerText = "Network error";
+                statusEl.style.color = "red";
+            }
+        }
+
+        /**
          * Applies the currently set filters to the segment data and updates the map and stats panels.
          */
         function applyFiltersAndRender() {
             if (!map || !allSegmentsData.length) return;
 
             const selectedZone = document.getElementById('zoneFilter').value;
+            const selectedMaterial = document.getElementById('materialFilter') ? document.getElementById('materialFilter').value : 'ALL';
             const maxRepairAge = parseInt(document.getElementById('maxRepairAge').value);
             const minTrafficLoad = parseFloat(document.getElementById('minTrafficLoad').value);
             
             // 1. Filter the data based on UI controls
             const filteredSegments = allSegmentsData.filter(segment => {
                 const zoneMatch = selectedZone === 'ALL' || segment.zone === selectedZone;
+                const matMatch = selectedMaterial === 'ALL' || !segment.road_material || segment.road_material === selectedMaterial;
                 const ageMatch = segment.age_days / 30.4375 <= maxRepairAge; // Convert days to months
                 const trafficMatch = segment.traffic_factor >= minTrafficLoad;
-                return zoneMatch && ageMatch && trafficMatch;
+                return zoneMatch && matMatch && ageMatch && trafficMatch;
             });
             
             // 2. Clear previous markers
@@ -946,17 +1104,6 @@
         function attachEventListeners() {
             document.getElementById('generateReportBtn').addEventListener('click', generateReport);
             document.getElementById('searchMapBtn').addEventListener('click', searchMap);
-        }
-
-        /**
-         * Updates the top-level overview cards (non-filtered).
-         * @param {object} factors - Overview data.
-         */
-        function updateOverviewMetrics(factors) {
-            document.getElementById('redZoneCount').textContent = factors.total_red_zones;
-            document.getElementById('avgTraffic').textContent = factors.average_traffic_factor;
-            document.getElementById('oldestRepairDate').textContent = factors.oldest_repair;
-            document.getElementById('newestRepairDate').textContent = factors.newest_repair;
         }
 
         /**

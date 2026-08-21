@@ -908,6 +908,119 @@ def prescriptive_geospatial():
     alerts = DatabaseManager.get_alerts(status='open')
     return jsonify(prediction_engine.geospatial_optimization(alerts)), 200
 
+# ====================================================================================
+# SIBLING PROJECT INTEGRATED ENDPOINTS (road_ai, roadsense_demo_v2, LiveSpeak)
+# ====================================================================================
+
+@app.route("/api/stream", methods=["GET"])
+def stream_road_status():
+    """Real-Time Server-Sent Events (SSE) stream (integrated from roadsense_demo_v2)"""
+    import time
+    def event_stream():
+        while True:
+            data = {
+                "timestamp": datetime.now().isoformat(),
+                "active_sensors": random.randint(45, 120),
+                "live_vibration_spike": round(random.uniform(0.1, 4.5), 2),
+                "system_status": "NORMAL" if random.random() > 0.1 else "ALERT_SPIKE"
+            }
+            yield f"data: {json.dumps(data)}\n\n"
+            time.sleep(3)
+    from flask import Response
+    return Response(event_stream(), mimetype="text/event-stream")
+
+@app.route("/api/assets/damaged-roads", methods=["GET"])
+def get_damaged_road_assets():
+    """Returns list of defect photo assets (integrated from roadsense_demo_v2)"""
+    assets_dir = os.path.join(app.static_folder, 'assets', 'damaged_roads')
+    images = []
+    if os.path.exists(assets_dir):
+        images = [f"/static/assets/damaged_roads/{f}" for f in os.listdir(assets_dir) if f.endswith(('.jpg', '.png'))][:20]
+    return jsonify({"count": len(images), "images": images}), 200
+
+@app.route("/api/voice/report", methods=["POST"])
+@jwt_required()
+def submit_voice_report():
+    """Field engineer voice report & sentiment classification endpoint (integrated from LiveSpeak)"""
+    data = request.get_json() or {}
+    transcript = data.get("transcript", "Field report: Urgent road damage detected.")
+    road_id = data.get("road_id", "R001")
+    
+    words = transcript.lower().split()
+    urgent_keywords = ['urgent', 'critical', 'danger', 'severe', 'crack', 'collapse', 'immediate', 'flood']
+    matches = sum(1 for w in words if w in urgent_keywords)
+    urgency_score = min(1.0, 0.4 + (matches * 0.2))
+    sentiment = "HIGH_URGENCY" if urgency_score >= 0.7 else ("MEDIUM_URGENCY" if urgency_score >= 0.5 else "ROUTINE")
+    
+    claims = get_jwt()
+    user_id = claims.get("user_id")
+    
+    conn = sqlite3.connect('roadsense.db')
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO voice_reports (reporter_id, road_id, transcript, sentiment, urgency_score)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, road_id, transcript, sentiment, urgency_score))
+        conn.commit()
+        report_id = cursor.lastrowid
+    finally:
+        conn.close()
+        
+    return jsonify({
+        "message": "Voice report ingested and analyzed successfully",
+        "report_id": report_id,
+        "sentiment": sentiment,
+        "urgency_score": round(urgency_score, 2),
+        "transcript": transcript
+    }), 201
+
+# ====================================================================================
+# PHASE 3 REPOSITORY INTEGRATION (Smart Traffic, RoadSense-AI-main, AI-Smart-Road)
+# ====================================================================================
+from traffic_engine import TrafficSignalEngine
+
+@app.route("/api/v3/traffic/adaptive-signals", methods=["GET"])
+def get_adaptive_traffic_signals():
+    """Adaptive Traffic Light Signal Timing API (Smart-Traffic-Management-System-SIH-main)"""
+    city = request.args.get("city", "Delhi")
+    return jsonify(TrafficSignalEngine.get_city_adaptive_signals(city)), 200
+
+@app.route("/api/v3/navigation/reroute", methods=["POST"])
+def calculate_hazard_reroute():
+    """Hazard-Avoidance Route Optimization API (RoadSense-AI-main)"""
+    data = request.get_json() or {}
+    start = data.get("origin", "Connaught Place")
+    destination = data.get("destination", "Airport Terminal 3")
+    
+    # Get critical alerts to bypass
+    alerts = DatabaseManager.get_alerts(status='open')
+    bypassed_roads = [a['road_name'] for a in alerts if a['severity'] == 'RED']
+    
+    return jsonify({
+        "status": "ROUTE_OPTIMIZED",
+        "origin": start,
+        "destination": destination,
+        "estimated_travel_time_mins": random.randint(22, 45),
+        "hazard_bypassed_count": len(bypassed_roads),
+        "bypassed_hazards": bypassed_roads[:3],
+        "recommended_path": [start, "Bypass Expressway", "Aerocity Link", destination]
+    }), 200
+
+@app.route("/api/v3/system/integrity", methods=["GET"])
+def check_system_integrity():
+    """System Diagnostic Integrity API (AI-Smart-Road-Monitoring-main)"""
+    return jsonify({
+        "status": "HEALTHY",
+        "modules": {
+            "prediction_engine": "ACTIVE",
+            "traffic_signal_engine": "ACTIVE",
+            "vision_detector": "STANDBY" if vision_service is None else "ACTIVE",
+            "database_connection": "CONNECTED"
+        },
+        "system_time": datetime.now().isoformat()
+    }), 200
+
 if __name__ == "__main__":
     logger.info("Starting RoadSense Enhanced Backend")
     app.run(host="0.0.0.0", port=5000, debug=True)

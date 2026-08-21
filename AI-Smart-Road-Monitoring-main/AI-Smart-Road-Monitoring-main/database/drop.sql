@@ -1,0 +1,1 @@
+DROP DATABASE IF EXISTS ai_smart_road_monitoring_system_application;

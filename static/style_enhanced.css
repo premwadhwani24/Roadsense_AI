@@ -417,3 +417,86 @@ input:focus, select:focus, textarea:focus {
 .heatmap-green { background: #4caf50; opacity: 0.7; }
 .heatmap-yellow { background: #ff9800; opacity: 0.7; }
 .heatmap-red { background: #f44336; opacity: 0.7; }
+
+/* Custom UI Animations & Glassmorphism Enhancements */
+@keyframes pulseGlowRed {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+@keyframes pulseGlowYellow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.6); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+@keyframes pulseGlowGreen {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.animated-fade-in {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.pulse-badge-red {
+    animation: pulseGlowRed 2s infinite;
+}
+
+.pulse-badge-yellow {
+    animation: pulseGlowYellow 2s infinite;
+}
+
+.pulse-badge-green {
+    animation: pulseGlowGreen 2.5s infinite;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08) !important;
+    transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+}
+
+.glass-card:hover {
+    transform: translateY(-5px) scale(1.01) !important;
+    box-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.15) !important;
+}
+
+.progress-bar-fill {
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shimmer-loader {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}

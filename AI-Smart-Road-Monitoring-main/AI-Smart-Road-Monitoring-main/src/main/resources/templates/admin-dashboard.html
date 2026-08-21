@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background:#0f172a;
+            color:#e5e7eb;
+            padding:20px;
+        }
+        .logout-btn {
+            float:right;
+            background:#ef4444;
+            color:white;
+            padding:8px 16px;
+            text-decoration:none;
+            border-radius:6px;
+            font-weight:bold;
+        }
+        .logout-btn:hover {
+            background:#dc2626;
+        }
+        canvas {
+            background:#ffffff;
+            border-radius:10px;
+            padding:10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div>
+        <h1 style="display:inline-block;">Admin Dashboard</h1>
+        <a th:href="@{/logout}" class="logout-btn">Logout</a>
+    </div>
+
+    <hr>
+
+    <!-- Status Counts -->
+    <h2>Status Counts</h2>
+    <p>Open: <span th:text="${openCount}"></span></p>
+    <p>Fixed: <span th:text="${fixedCount}"></span></p>
+
+    <!-- Severity Distribution -->
+    <h2>Severity Distribution</h2>
+    <canvas id="severityChart" width="10" height="10"></canvas>
+
+    <!-- Daily Detection Trend -->
+    <h2>Daily Detection Trend (Last 7 Days)</h2>
+    <canvas id="dailyChart" width="10" height="10"></canvas>
+
+    <!-- Potholes per Road -->
+    <h2>Potholes per Road</h2>
+    <canvas id="roadChart" width="10" height="10"></canvas>
+
+<script th:inline="javascript">
+/* Severity Chart */
+var severityData = /*[[${severityDistribution}]]*/ [];
+var labels = severityData.map(e => e[0]);
+var data = severityData.map(e => e[1]);
+
+new Chart(document.getElementById('severityChart'), {
+    type: 'pie',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: data,
+            backgroundColor: ['#ef4444','#3b82f6','#facc15','#22c55e']
+        }]
+    }
+});
+
+/* Daily Trend Chart */
+var dailyData = /*[[${dailyTrend}]]*/ [];
+var labels2 = dailyData.map(e => e[0]);
+var data2 = dailyData.map(e => e[1]);
+
+new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: {
+        labels: labels2,
+        datasets: [{
+            label: 'Detected',
+            data: data2,
+            fill: false,
+            borderColor: '#3b82f6'
+        }]
+    }
+});
+
+/* Potholes per Road Chart */
+var roadData = /*[[${potholesPerRoad}]]*/ [];
+var labels3 = roadData.map(e => 'Road ' + e[0]);
+var data3 = roadData.map(e => e[1]);
+
+new Chart(document.getElementById('roadChart'), {
+    type: 'bar',
+    data: {
+        labels: labels3,
+        datasets: [{
+            label: 'Potholes',
+            data: data3,
+            backgroundColor: '#f97316'
+        }]
+    }
+});
+</script>
+
+</body>
+</html>

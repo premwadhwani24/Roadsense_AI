@@ -331,6 +331,99 @@ def test_dashboard_summary():
         print(f"❌ Error: {e}")
         return False
 
+def test_voice_report():
+    """Test 13: Voice Dispatch Analysis Endpoint"""
+    print_section("Test 13: Voice Dispatch Analysis")
+    if not TOKEN:
+        print("⚠️  Skipped - Not logged in")
+        return False
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/voice/report",
+            headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"},
+            json={"road_id": "R001", "transcript": "Critical urgent road collapse reported near main junction"}
+        )
+        if response.status_code == 201:
+            print("✅ Voice report test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_damaged_road_assets():
+    """Test 14: Damaged Road Asset Gallery Endpoint"""
+    print_section("Test 14: Damaged Road Asset Gallery")
+    try:
+        response = requests.get(f"{BASE_URL}/api/assets/damaged-roads")
+        if response.status_code == 200:
+            print("✅ Damaged road assets test successful")
+            data = response.json()
+            print(f"   Images found: {data.get('count', 0)}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_adaptive_traffic_signals():
+    """Test 15: Adaptive Traffic Light Signal Timing Endpoint"""
+    print_section("Test 15: Adaptive Traffic Light Signal Timing")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/traffic/adaptive-signals?city=Delhi")
+        if response.status_code == 200:
+            print("✅ Adaptive traffic signals test successful")
+            data = response.json()
+            print(f"   Intersections monitored: {data.get('intersections_monitored')}, Avg Green: {data.get('average_green_duration')}s")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_hazard_reroute():
+    """Test 16: Hazard-Avoidance Route Optimization Endpoint"""
+    print_section("Test 16: Hazard-Avoidance Route Optimization")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/navigation/reroute",
+            headers={"Content-Type": "application/json"},
+            json={"origin": "Connaught Place", "destination": "Airport Terminal 3"}
+        )
+        if response.status_code == 200:
+            print("✅ Hazard reroute test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_system_integrity():
+    """Test 17: System Diagnostic Integrity Endpoint"""
+    print_section("Test 17: System Diagnostic Integrity")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/system/integrity")
+        if response.status_code == 200:
+            print("✅ System integrity test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -365,6 +458,11 @@ def run_all_tests():
     results.append(("Get KPIs", test_get_kpis()))
     results.append(("Citizen Report", test_citizen_report()))
     results.append(("Dashboard Summary", test_dashboard_summary()))
+    results.append(("Voice Report Analysis", test_voice_report()))
+    results.append(("Damaged Road Assets", test_damaged_road_assets()))
+    results.append(("Adaptive Traffic Signals", test_adaptive_traffic_signals()))
+    results.append(("Hazard Rerouting", test_hazard_reroute()))
+    results.append(("System Integrity", test_system_integrity()))
     
     # Print summary
     print_section("Test Summary")

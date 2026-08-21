@@ -1,0 +1,19 @@
+<body style="background:radial-gradient(circle at top left,#1f6feb,#030712);">
+<div class="container mt-5" style="max-width:600px;background:#0f172a;padding:30px;border-radius:20px;color:#e5e7eb;">
+<h3 class="mb-4">Report Pothole</h3>
+
+<form th:action="@{/pothole/report}" th:object="${pothole}" method="post">
+    <input th:field="*{roadId}" class="form-control mb-3" placeholder="Road ID" required>
+    <input th:field="*{latitude}" class="form-control mb-3" placeholder="Latitude" required>
+    <input th:field="*{longitude}" class="form-control mb-3" placeholder="Longitude" required>
+
+    <select th:field="*{severity}" class="form-control mb-3">
+        <option value="LOW">Low</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="HIGH">High</option>
+    </select>
+
+    <button class="btn btn-success w-100">Submit</button>
+</form>
+</div>
+</body>

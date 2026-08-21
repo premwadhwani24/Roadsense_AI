@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Repair Status</title>
+</head>
+<body>
+
+<h2>Repair Status</h2>
+
+<table border="1">
+    <tr>
+        <th>Pothole ID</th>
+        <th>Status</th>
+        <th>Updated At</th>
+    </tr>
+    <tr th:each="r : ${repairs}">
+        <td th:text="${r.potholeId}"></td>
+        <td th:text="${r.status}"></td>
+        <td th:text="${r.updatedAt}"></td>
+    </tr>
+</table>
+
+<a th:href="@{/pwd/dashboard}">Back</a>
+
+</body>
+</html>

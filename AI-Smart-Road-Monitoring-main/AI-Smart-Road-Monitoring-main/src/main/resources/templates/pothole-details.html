@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Pothole Details</title>
+</head>
+<body>
+
+<h2>Pothole Details</h2>
+
+<p><strong>ID:</strong> <span th:text="${pothole.id}">1</span></p>
+<p><strong>Location:</strong> <span th:text="${pothole.gpsLocation}"></span></p>
+<p><strong>Severity:</strong> <span th:text="${pothole.severity}"></span></p>
+<p><strong>Status:</strong> <span th:text="${pothole.status}"></span></p>
+
+<a th:href="@{/admin/dashboard}">Back</a>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Pothole List</title>
+</head>
+<body>
+    <h1>Pothole List</h1>
+    <a th:href="@{/admin/dashboard}">Back to Dashboard</a>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Road ID</th>
+                <th>GPS Location</th>
+                <th>GPS Pin</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Length</th>
+                <th>Width</th>
+                <th>Depth</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Detected Date</th>
+                <th>Detected At</th>
+                <th>Image</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="pothole : ${potholes}">
+                <td th:text="${pothole.id}"></td>
+                <td th:text="${pothole.roadId}"></td>
+                <td th:text="${pothole.gpsLocation}"></td>
+                <td th:text="${pothole.gpsPin}"></td>
+                <td th:text="${pothole.latitude}"></td>
+                <td th:text="${pothole.longitude}"></td>
+                <td th:text="${pothole.length}"></td>
+                <td th:text="${pothole.width}"></td>
+                <td th:text="${pothole.depth}"></td>
+                <td th:text="${pothole.severity}"></td>
+                <td th:text="${pothole.status}"></td>
+                <td th:text="${#dates.format(pothole.detectedDate,'yyyy-MM-dd HH:mm')}"></td>
+                <td th:text="${#dates.format(pothole.detectedAt,'yyyy-MM-dd HH:mm')}"></td>
+                <td>
+                    <img th:src="@{${pothole.imagePath}}" alt="Pothole Image" width="100"/>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

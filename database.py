@@ -140,14 +140,34 @@ def init_database():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS blockchain_ledger (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            block_index INTEGER NOT NULL,
+            prev_hash TEXT NOT NULL,
             block_hash TEXT NOT NULL,
-            previous_hash TEXT NOT NULL,
-            transaction_type TEXT,
-            payload TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            nonce INTEGER
+            transaction_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Voice Reports Table (LiveSpeak Integration)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS voice_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reporter_id INTEGER REFERENCES users(id),
+            road_id TEXT,
+            audio_url TEXT,
+            transcript TEXT,
+            sentiment TEXT,
+            urgency_score REAL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Check and add road_material column dynamically if not present
+    try:
+        cursor.execute("ALTER TABLE alerts ADD COLUMN road_material TEXT DEFAULT 'Asphalt'")
+    except sqlite3.OperationalError:
+        pass
     
     # Digital Twin States
     cursor.execute('''

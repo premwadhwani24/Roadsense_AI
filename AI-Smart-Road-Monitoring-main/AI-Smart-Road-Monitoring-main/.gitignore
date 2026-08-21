@@ -1,0 +1,99 @@
+# =========================
+# Java / Maven
+# =========================
+/target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.iml
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+*.tmp
+*.bak
+*.swp
+
+# Eclipse specific
+*.launch
+*.prefs
+
+# =========================
+# Spring Boot
+# =========================
+/spring.log
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.joblib
+*.sqlite
+*.db
+
+# Virtual environment
+venv/
+env/
+.env
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# Data / Reports / Images
+# =========================
+/data/
+/reports/
+/images/
+/python_ai/uploads/
+/python_ai/models_store/
+/python_ai/data/reports/
+*.csv
+*.xlsx
+*.json
+*.jpg
+*.png
+*.jpeg
+*.gif
+
+# =========================
+# OS / System files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Scripts / Auto-generated / temp
+# =========================
+*.bat
+*.sh
+*.ps1
+*.pyc
+*.lock
+*.log
+*.tmp
+*.zip

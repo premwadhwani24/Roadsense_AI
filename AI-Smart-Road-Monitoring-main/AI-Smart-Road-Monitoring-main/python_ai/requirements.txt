@@ -1,0 +1,9 @@
+Flask
+flask-cors
+numpy
+opencv-python
+joblib
+Pillow
+pandas
+scikit-learn==1.7.2
+requests

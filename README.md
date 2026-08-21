@@ -11,27 +11,38 @@ Traditional road maintenance is reactive, expensive, and often lacks transparenc
 
 ## 🚀 Key Modules & Capabilities
 
-### 🧠 1. AI Prediction Engine
+### 🧠 1. AI Prediction & Material Deterioration Engine
 - **Deterioration Modeling**: Forecasts road health over 30, 60, and 90-day windows.
+- **Material-Specific Wear Analysis**: Calculates risk scores for Asphalt, Concrete, and PCC (Portland Cement Concrete) under moisture and traffic stress.
 - **Accident Risk Mapping**: Identifies high-risk zones using historical data and spatial analysis.
 - **Pothole Forecasting**: Spatial prediction of likely defect formations using environmental stressors.
 
-### 👁️ 2. Computer Vision (RoadAthena Integration)
-- **Deep Learning Defects**: Real-time detection of cracks, potholes, and surface wear from mobile/CCTV feeds.
-- **Automated Asset Inventory**: AI-generated maps of speed signs, guardrails, and traffic lights with condition scoring.
+### 🚥 2. Adaptive Traffic Signal Control
+- **Dynamic Green-Light Timing**: Optimizes signal green durations (15s to 60s) in real time based on intersection vehicle counts and queue lengths (`traffic_engine.py`).
+- **Hazard-Avoidance Navigation**: Reroutes urban traffic away from `RED` critical road defect zones to prevent gridlocks and accidents.
 
-### ⛓️ 3. Blockchain & Auditing
+### 🎙️ 3. Field Engineer Voice Dispatch & Sentiment Analysis
+- **AI Audio Reporting**: Allows field crews to submit spoken defect notes via voice memos or transcripts.
+- **Urgency Sentiment Scoring**: Automatically classifies reports into `HIGH_URGENCY`, `MEDIUM_URGENCY`, and `ROUTINE` priority queues.
+
+### 👁️ 4. Computer Vision & Defect Asset Gallery
+- **Deep Learning Defects**: Real-time detection of cracks, potholes, and surface wear from mobile/CCTV feeds.
+- **Defect Asset Gallery**: Serves categorized defect photo assets and visual evidence for municipal audits.
+
+### ⛓️ 5. Blockchain & Auditing
 - **Immutable Ledgers**: Every work order, contractor payout, and maintenance action is cryptographically signed.
 - **Transparency**: Prevents "ghost repairs" and ensures budget accountability.
 
-### 📡 4. Multi-Source Data Fusion
+### 📡 6. Real-Time Streaming & Data Fusion
+- **Server-Sent Events (SSE)**: Live event stream emitting real-time vibration spikes and sensor node telemetry (`/api/stream`).
 - **IoT Integration**: Live telemetry from vibration sensors and traffic load monitors.
 - **Vehicle Crowd-Sensing**: Aggregates GPS and accelerometer data from everyday commuters to map road roughness (IRI).
-- **LLM Decisions**: A Generative AI assistant (LLM) provides plain-language summaries and technical recommendations.
+- **LLM Decision Assistant**: Generates plain-language engineering repair booklets and summaries.
 
-### 📊 5. Financial & Resource Optimization
-- **Dynamic Budgeting**: Real-time tracking of municipal funds vs. repair requirements.
+### 📊 7. Dynamic UI & Resource Optimization
+- **Modern Animated Dashboard**: Built with Glassmorphism styling, CSS keyframe entrance fade-ins, pulsing alert indicators, and animated JS count-up counters.
 - **Geospatial Clustering (DBSCAN)**: Automatically groups proximal defects into "Maintenance Zones" to optimize fuel and labor.
+- **System Integrity Diagnostics**: Real-time diagnostic endpoint (`/api/v3/system/integrity`) monitoring subsystem health.
 
 ---
 

@@ -16,6 +16,56 @@ class RoadPredictionEngine:
     
     def __init__(self, db_path: str = 'roadsense.db'):
         self.db_path = db_path
+
+    def calculate_material_risk_score(self, traffic_factor: float, rain_mm: float, 
+                                     material_degradation_factor: float, road_material: str = "Asphalt") -> Dict:
+        """
+        Core logic to calculate the risk score and determine immediate action based 
+        on real-time factors (Traffic, Weather, Material Condition, Material Type).
+        Integrated from road_ai ML simulation layer.
+        """
+        traffic_factor = float(traffic_factor)
+        rain_mm = float(rain_mm)
+        material_degradation_factor = float(material_degradation_factor)
+        
+        # Base Risk Calculation
+        traffic_weight = 0.40
+        weather_weight = 0.30
+        degradation_weight = 0.30
+        
+        traffic_score = traffic_factor * traffic_weight
+        weather_score = (min(rain_mm, 25) / 25.0) * weather_weight
+        material_score = material_degradation_factor * degradation_weight
+        
+        total_risk_score = traffic_score + weather_score + material_score
+
+        # Material-Specific Adjustment
+        mat_lower = str(road_material).lower()
+        if mat_lower == 'concrete':
+            total_risk_score *= 0.95
+        elif mat_lower == 'pcc':
+            total_risk_score *= 1.05
+        elif mat_lower == 'asphalt':
+            total_risk_score *= 1.10
+
+        total_risk_score = min(1.0, max(0.0, total_risk_score))
+
+        if total_risk_score >= 0.75:
+            zone = 'RED'
+            reason = f"CRITICAL: High Risk Score ({total_risk_score:.2f}) on {road_material}. Immediate crew dispatch required."
+        elif total_risk_score >= 0.50:
+            zone = 'YELLOW'
+            reason = f"HIGH RISK: Risk Score ({total_risk_score:.2f}) on {road_material}. Proactive maintenance recommended."
+        else:
+            zone = 'GREEN'
+            reason = f"GOOD: Risk Score ({total_risk_score:.2f}) on {road_material}. Routine monitoring."
+
+        return {
+            "zone": zone,
+            "risk_score": f"{total_risk_score:.2f}",
+            "road_material": road_material,
+            "reason_for_zone": reason,
+        }
         
     def predict_road_deterioration(self, road_id: int, days_ahead: int = 30) -> Dict:
         """

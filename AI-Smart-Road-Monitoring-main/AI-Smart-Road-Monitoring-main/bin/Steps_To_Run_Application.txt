@@ -1,0 +1,185 @@
+JAVA
+start STS 
+Go to D:\ai_smart_road_monitoring_system_application\src\main\java\com\ai\smart\road\monitoring\system\application and right-click and run as a Java application AiSmartRoadMonitoringApplication.java.
+Go to D:\ai_smart_road_monitoring_system_application\src\main\java\com\ai\smart\road\monitoring\system\application\guipackage and right-click and run as a Java application.  SmartRoadDashboardLauncher.java.
+
+Python 
+1st CMD open 
+Go to D:\ai_smart_road_monitoring_system_application\python_ai and run api_server.py.
+2nd CMD open
+Go to D:\ D:\ai_smart_road_monitoring_system_application\python_ai and run gui_api_client.py.
+
+⭐ Admin Dashboard
+http://localhost:9090/admin/dashboard
+
+⭐ Collector Dashboard
+http://localhost:9090/collector/dashboard
+
+⭐ Municipal Dashboard
+http://localhost:9090/municipal/dashboard
+
+⭐ PWD Dashboard
+http://localhost:9090/pwd/dashboard
+
+⭐ Normal User Dashboard
+http://localhost:9090/user/dashboard
+
+📌 Login URL (common for all):
+http://localhost:9090/login
+
+📌 Logout URL
+http://localhost:9090/logout
+
+
+| Username  | Password     | Role      |
+| --------- | ------------ | --------- |
+| admin     | admin123     | ADMIN     |
+| collector | collector123 | COLLECTOR |
+| municipal | municipal123 | MUNICIPAL |
+| pwd       | pwd123       | PWD       |
+| user      | user123      | USER      |
+
+Invalid username or password. Please try again.
+admin
+admin123
+
+collector
+collector123
+
+municipal
+municipal123
+
+pwd
+pwd123
+
+user
+user123
+
+
+
+01. Final file create.sql, drop.sql, reset.sql, insert.sql, delete.sql, select.sql, update.sql 
+----
+
+02. Create a large dummy data set for pothole_model.pkl, pothole_model.joblib, and scaler.pkl. download .zip link 
+
+03. Create a large dummy data set for sample_sensor.csv, dummy_surface_data.csv, and dummy_sensor_stream.json. download .zip link 
+
+04. Create a large dummy data set for dummy_pothole_data.json and dummy_image_list.json. download .zip link 
+
+05. Create a large dummy data set for gps_sample_data.json. download .zip link 
+
+06. Create a large dummy data set for test_image_1–5.jpg. download .zip link 
+
+07. Create a large dummy data set for activity_log_large.sql, pothole_large.sql, repair_activity_large.sql, roles.sql, and users_large.sql. download .zip link 
+
+08. Create a large dummy data set for potholes_data.json, road_data.json, and dashboard_data.json. download .zip link 
+
+09. Create a large dummy data set for dummy_upload_1–5.jpg, dummy_batch_upload.zip download .zip link 
+
+10. Create a large dummy data set for daily_report.csv, monthly_summary.xlsx, sensor_log.csv, sensor_log.xlsx download .zip link 
+
+
+Here is a clean, organized list of all file paths **in a standard project folder structure**.
+(If you want these in a ZIP, or want me to *generate* the files, just tell me!)
+
+---
+
+# ✅ **Consolidated File Path List**
+
+### 📁 **Models/**
+
+```
+models/pothole_model.pkl
+models/pothole_model.joblib
+models/scaler.pkl
+```
+
+---
+
+### 📁 **Sensor & Surface Data/**
+
+```
+data/sample_sensor.csv
+data/dummy_surface_data.csv
+data/dummy_sensor_stream.json
+```
+
+---
+
+### 📁 **JSON Dummy Data/**
+
+```
+data/dummy_pothole_data.json
+data/dummy_image_list.json
+data/gps_sample_data.json
+data/potholes_data.json
+data/road_data.json
+data/dashboard_data.json
+```
+
+---
+
+### 📁 **Images/**
+
+```
+images/test_image_1.jpg
+images/test_image_2.jpg
+images/test_image_3.jpg
+images/test_image_4.jpg
+images/test_image_5.jpg
+
+images/dummy_upload_1.jpg
+images/dummy_upload_2.jpg
+images/dummy_upload_3.jpg
+images/dummy_upload_4.jpg
+images/dummy_upload_5.jpg
+
+images/dummy_batch_upload.zip
+```
+
+---
+
+### 📁 **Database SQL Files/**
+
+```
+database/activity_log_large.sql
+database/pothole_large.sql
+database/repair_activity_large.sql
+database/roles.sql
+database/users_large.sql
+```
+
+---
+
+### 📁 **SQL Scripts/**
+
+```
+sql/create.sql
+sql/drop.sql
+sql/reset.sql
+sql/insert.sql
+sql/delete.sql
+sql/select.sql
+sql/update.sql
+```
+
+---
+
+### 📁 **Reports/**
+
+```
+reports/daily_report.csv
+reports/monthly_summary.xlsx
+reports/sensor_log.csv
+reports/sensor_log.xlsx
+```
+
+---
+
+# ⭐ If you want:
+
+✅ A downloadable **ZIP** containing this full folder structure
+✅ Auto-generated **dummy data** inside each file
+✅ SQL files filled with sample rows
+✅ Images (dummy / generated)
+Just tell me **"Create full project ZIP"** and I’ll generate everything.
