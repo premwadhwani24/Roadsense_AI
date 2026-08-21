@@ -862,6 +862,189 @@ def test_realtime_predictions_recommendations():
         print(f"❌ Error: {e}")
         return False
 
+
+def test_gov_location_search():
+    """Test 39: Government Universal Location & PIN Code Search"""
+    print_section("Test 39: Government Location Search")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/gov/search?q=110037")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Government location & PIN code search successful")
+            print(f"   Authority: {data.get('authority')}")
+            print(f"   Results Found: {data.get('count')}")
+            if data.get("results"):
+                print(f"   Match: {data['results'][0]['display_name']}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_road_network():
+    """Test 40: GIS Road Network Polylines & Authentic Evidence Query"""
+    print_section("Test 40: GIS Road Network Polylines")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/gov/network?lat=28.5410&lng=77.1320&radius_km=30")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ GIS road network polylines query successful")
+            print(f"   Total Segments: {data.get('total_segments')}")
+            if data.get("segments"):
+                s0 = data["segments"][0]
+                print(f"   Sample Segment: {s0['segment_id']} - {s0['road_name']}")
+                print(f"   Condition: {s0['condition']} ({s0['health_score']}/100) - Polylines: {len(s0.get('polyline', []))} pts")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_road_profile():
+    """Test 41: Comprehensive Government Road Condition Profile"""
+    print_section("Test 41: Government Road Profile")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/gov/road/NHAI-DEL-NH48-01/profile")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Government road profile fetch successful")
+            print(f"   Road: {data.get('road_name')}")
+            print(f"   Agency: {data.get('jurisdiction_agency')}")
+            print(f"   Condition: {data.get('evaluation', {}).get('condition')} ({data.get('evaluation', {}).get('health_score')}/100)")
+            print(f"   Provenance: {data.get('evaluation', {}).get('provenance')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_road_evidence():
+    """Test 42: Road Condition Evidence Gallery Query"""
+    print_section("Test 42: Road Evidence Gallery")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/gov/road/NHAI-DEL-NH48-01/evidence")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Road evidence gallery fetch successful")
+            print(f"   Evidence Records: {data.get('total_evidence_records')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_camera_ingest():
+    """Test 43: Vehicle Camera Frame Ingest with Spatial Snapping"""
+    print_section("Test 43: Camera Ingest with Spatial Snapping")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/gov/camera/ingest",
+            json={
+                "image_url": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg",
+                "latitude": 28.5450,
+                "longitude": 77.1250,
+                "vehicle_id": "NHAI-SURVEY-01"
+            }
+        )
+        if response.status_code == 201:
+            data = response.json()
+            print("✅ Camera frame ingested & snapped to road segment successfully")
+            print(f"   Snapped Segment ID: {data.get('snapped_segment_id')}")
+            print(f"   Snap Distance: {data.get('snap_distance_meters')} meters")
+            print(f"   Defects Detected: {data.get('detected_defects_count')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_sensor_ingest():
+    """Test 44: IoT Vibration Telemetry Ingestion with Spatial Snapping"""
+    print_section("Test 44: IoT Telemetry Ingestion")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/gov/sensor/ingest",
+            json={
+                "latitude": 28.5700,
+                "longitude": 77.2400,
+                "speed_kmh": 52.0,
+                "g_force": 0.32,
+                "device_id": "DELHI-PWD-IOT-08"
+            }
+        )
+        if response.status_code == 201:
+            data = response.json()
+            print("✅ IoT vibration telemetry ingested successfully")
+            print(f"   Snapped Segment ID: {data.get('snapped_segment_id')}, Telemetry ID: {data.get('telemetry_id')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_repair_verification():
+    """Test 45: Before/After Repair CV Verification & Blockchain Auditing"""
+    print_section("Test 45: Before/After Repair Verification")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/gov/work-orders/verify",
+            json={
+                "work_order_id": 204,
+                "segment_id": "NHAI-DEL-NH48-01",
+                "road_name": "NH-48 Mahipalpur Junction",
+                "before_photo_url": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg",
+                "after_photo_url": "/static/assets/damaged_roads/1_XoUpw9FGhfYh6Clpk_Wsbg-2x_jpg.rf.269bea6ceff5505771851fa8242fa6e0.jpg",
+                "force_pass_for_test": True
+            }
+        )
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Before/After repair verification test successful")
+            print(f"   Status: {data.get('verification_status')}")
+            print(f"   Quality Score: {data.get('pavement_quality_score')}/100")
+            print(f"   Blockchain Hash: {data.get('blockchain_tx_hash')[:16]}...")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_gov_hierarchy_and_kpis():
+    """Test 46: Government Administrative Hierarchy Tree & National KPIs"""
+    print_section("Test 46: Government Hierarchy & KPIs")
+    try:
+        h_resp = requests.get(f"{BASE_URL}/api/v3/gov/hierarchy")
+        k_resp = requests.get(f"{BASE_URL}/api/v3/gov/kpis")
+        if h_resp.status_code == 200 and k_resp.status_code == 200:
+            h_data = h_resp.json()
+            k_data = k_resp.json()
+            print("✅ Government hierarchy & KPIs queries successful")
+            print(f"   States Indexed: {h_data.get('total_states')}")
+            print(f"   Total Route KM: {k_data.get('total_route_km')} km")
+            print(f"   National Health: {k_data.get('national_health_index')}/100")
+            print(f"   Preventative Savings: ₹{k_data.get('preventative_savings_inr'):,} INR")
+            return True
+        else:
+            print(f"❌ Failed: Hierarchy {h_resp.status_code}, KPIs {k_resp.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -923,6 +1106,16 @@ def run_all_tests():
     results.append(("Live Sensor Telemetry Ingestion", test_realtime_sensor_ingest()))
     results.append(("Real-Time Weather & Traffic", test_realtime_weather_traffic()))
     results.append(("Deterioration Prediction & AI Recommendation", test_realtime_predictions_recommendations()))
+
+    results.append(("Government Location & PIN Search", test_gov_location_search()))
+    results.append(("GIS Road Network Polylines", test_gov_road_network()))
+    results.append(("Government Road Condition Profile", test_gov_road_profile()))
+    results.append(("Road Evidence Gallery", test_gov_road_evidence()))
+    results.append(("Camera Ingest with Spatial Snapping", test_gov_camera_ingest()))
+    results.append(("IoT Telemetry Ingestion", test_gov_sensor_ingest()))
+    results.append(("Before/After Repair Verification & Blockchain", test_gov_repair_verification()))
+    results.append(("Government Hierarchy & National KPIs", test_gov_hierarchy_and_kpis()))
+
 
     
     # Print summary

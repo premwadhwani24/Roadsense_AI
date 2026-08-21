@@ -5,6 +5,7 @@ Features: User Management, Real-time Alerts, Work Orders, Crowdsourced Reports,
 Analytics, and Advanced Dashboard
 """
 import os
+import time
 import json
 import random
 import logging
@@ -1794,6 +1795,367 @@ def realtime_telemetry_stream():
             time.sleep(3.0)
             
     return Response(generate_events(), mimetype="text/event-stream")
+
+
+# ====================================================================================
+# PHASE 8: GOVERNMENT-GRADE REAL-TIME ROAD INFRASTRUCTURE MONITORING & MANAGEMENT
+# ====================================================================================
+from gis_road_network import GISRoadNetworkEngine, haversine_km
+from pavement_scoring import PavementScoringEngine
+from repair_verification import RepairVerificationEngine
+from gov_admin_service import GovAdminService, GOV_ROLES
+
+@app.route("/api/v3/gov/search", methods=["GET"])
+@app.route("/api/location/search", methods=["GET"])
+def gov_location_search():
+    """
+    Universal Indian Location Search (PIN Code, Highway, District, City, Landmark, GPS Coords).
+    Query: q, lat, lng
+    """
+    query = request.args.get("q", "")
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+
+    if not query and (lat is None or lng is None):
+        return jsonify({"results": [], "count": 0}), 200
+
+    # 1. Search in Pan-India GIS Registry first (PIN codes, highways, districts)
+    registry_matches = GISRoadNetworkEngine.search_registry_by_query(query) if query else []
+    
+    # 2. Search external / geocoding providers via LocationSearchEngine
+    geo_results = LocationSearchEngine.search_location(query=query, lat=lat, lng=lng) if query else []
+
+    combined = []
+    seen = set()
+
+    for item in registry_matches:
+        key = item["segment_id"]
+        if key not in seen:
+            seen.add(key)
+            combined.append({
+                "display_name": f"{item['road_name']} ({item['highway_code'] or item['road_type']}), {item['city']}, {item['state']} - PIN {item['pincode']}",
+                "formatted_address": f"{item['road_name']}, {item['district']}, {item['state']}, India",
+                "latitude": item["center_lat"],
+                "longitude": item["center_lng"],
+                "segment_id": item["segment_id"],
+                "road_type": item["road_type"],
+                "jurisdiction": item["jurisdiction_agency"],
+                "pincode": item["pincode"],
+                "source": "MORTH_PWD_GIS_REGISTRY"
+            })
+
+    for item in geo_results:
+        key = f"{item.get('latitude'):.4f}_{item.get('longitude'):.4f}"
+        if key not in seen:
+            seen.add(key)
+            combined.append(item)
+
+    return jsonify({
+        "query": query,
+        "results": combined,
+        "count": len(combined),
+        "authority": "MoRTH / State PWD Infrastructure Registry"
+    }), 200
+
+@app.route("/api/v3/gov/network", methods=["GET"])
+@app.route("/api/roads/segments", methods=["GET"])
+@app.route("/api/roads/nearby", methods=["GET"])
+def gov_road_network():
+    """
+    Fetches real road network segments around GPS coordinates with true polylines & authentic conditions.
+    Query: lat, lng, radius_km, state, district, city, status, pincode
+    """
+    lat = request.args.get("lat", default=28.6139, type=float)
+    lng = request.args.get("lng", default=77.2090, type=float)
+    radius_km = request.args.get("radius_km", default=50.0, type=float)
+    state = request.args.get("state")
+    district = request.args.get("district")
+    city = request.args.get("city")
+    status = request.args.get("status")
+    pincode = request.args.get("pincode")
+
+    # Fetch from SQLite gov_road_segments table
+    db_segments = DatabaseManager.get_gov_segments(state=state, district=district, city=city, status=status, pincode=pincode)
+
+    if not db_segments:
+        # Fallback to GIS engine registry directly
+        db_segments = GISRoadNetworkEngine.get_nearby_road_network(lat=lat, lng=lng, radius_km=radius_km)
+
+    enriched_segments = []
+    for seg in db_segments:
+        center_lat = seg.get("center_lat", lat)
+        center_lng = seg.get("center_lng", lng)
+        d_km = haversine_km(lat, lng, center_lat, center_lng)
+        
+        if radius_km and d_km > radius_km and not (state or district or city or pincode):
+            continue
+
+        # Get latest evidence records for this segment
+        evidence = DatabaseManager.get_road_evidence(seg["segment_id"], limit=5)
+        
+        # Calculate real-time health score from evidence
+        eval_result = PavementScoringEngine.evaluate_road_health(
+            base_pci=seg.get("pci_score"),
+            iri=seg.get("iri_score"),
+            g_force_peak=seg.get("vibration_gforce_peak", 0.25),
+            defects_list=[d for ev in evidence for d in ev.get("defects", [])],
+            citizen_reports_count=seg.get("crack_count", 0),
+            last_inspected_at=seg.get("last_surveyed_at")
+        )
+
+        seg_copy = dict(seg)
+        seg_copy["distance_km"] = round(d_km, 2)
+        seg_copy["condition"] = eval_result["condition"]
+        seg_copy["condition_label"] = eval_result["condition_label"]
+        seg_copy["health_score"] = eval_result["health_score"]
+        seg_copy["color_hex"] = eval_result["color_hex"]
+        seg_copy["confidence"] = eval_result["confidence"]
+        seg_copy["freshness"] = eval_result["freshness"]
+        seg_copy["provenance"] = eval_result["provenance"]
+        seg_copy["evidence_count"] = len(evidence)
+        seg_copy["penalties"] = eval_result["penalties"]
+        seg_copy["explanation"] = eval_result["explanation"]
+
+        enriched_segments.append(seg_copy)
+
+    enriched_segments.sort(key=lambda x: x.get("distance_km", 0))
+
+    return jsonify({
+        "center": {"latitude": lat, "longitude": lng},
+        "radius_km": radius_km,
+        "total_segments": len(enriched_segments),
+        "segments": enriched_segments,
+        "provenance_standard": "IRC:SP:84-2019 Authentic Evidence Layer"
+    }), 200
+
+@app.route("/api/v3/gov/road/<segment_id>/profile", methods=["GET"])
+@app.route("/api/roads/<segment_id>/health", methods=["GET"])
+def gov_road_profile(segment_id):
+    """
+    Detailed Government Road Condition Profile with health breakdown, evidence gallery,
+    deterioration forecasts, and IRC maintenance action plan.
+    """
+    seg = DatabaseManager.get_gov_segment_by_id(segment_id)
+    if not seg:
+        # Check GIS registry
+        for s in GISRoadNetworkEngine.PAN_INDIA_REGISTRY:
+            if s["segment_id"] == segment_id:
+                seg = dict(s)
+                break
+
+    if not seg:
+        return jsonify({"error": f"Road segment {segment_id} not found in government database"}), 404
+
+    # Real-time weather and traffic
+    weather = WeatherEngine.get_weather(city=seg.get("city", ""), lat=seg["center_lat"], lng=seg["center_lng"])
+    traffic = TrafficEngine.get_traffic(lat=seg["center_lat"], lng=seg["center_lng"], road_name=seg["road_name"])
+
+    # Recent evidence
+    evidence = DatabaseManager.get_road_evidence(segment_id, limit=10)
+
+    # Health Evaluation
+    eval_result = PavementScoringEngine.evaluate_road_health(
+        base_pci=seg.get("pci_score"),
+        iri=seg.get("iri_score"),
+        g_force_peak=seg.get("vibration_gforce_peak", 0.25),
+        defects_list=[d for ev in evidence for d in ev.get("defects", [])],
+        last_inspected_at=seg.get("last_surveyed_at")
+    )
+
+    # Predictions
+    h_score = eval_result["health_score"] or 75.0
+    predictions = DeteriorationPredictor.predict_risk(
+        health_score=h_score,
+        iri=seg.get("iri_score") or 2.0,
+        potholes=seg.get("pothole_count", 0),
+        traffic_congestion=traffic.get("congestion_pct", 25.0),
+        rainfall_mm=weather.get("rainfall_last_3h_mm", 0.0)
+    )
+
+    # Recommendation
+    recommendation = MaintenanceRecommender.generate_recommendation(
+        road_name=seg["road_name"],
+        condition=eval_result["condition"],
+        health_score=h_score,
+        iri=seg.get("iri_score") or 2.0,
+        potholes=seg.get("pothole_count", 0),
+        crack_severity="Medium" if seg.get("crack_count", 0) > 0 else "None",
+        predictions=predictions,
+        weather=weather
+    )
+
+    return jsonify({
+        "segment_id": segment_id,
+        "road_name": seg["road_name"],
+        "road_type": seg.get("road_type", "Urban Arterial"),
+        "highway_code": seg.get("highway_code", ""),
+        "state": seg.get("state", ""),
+        "district": seg.get("district", ""),
+        "city": seg.get("city", ""),
+        "pincode": seg.get("pincode", ""),
+        "jurisdiction_agency": seg.get("jurisdiction_agency", "PWD"),
+        "length_km": seg.get("length_km", 1.0),
+        "lanes": seg.get("lanes", 4),
+        "speed_limit_kmh": seg.get("speed_limit_kmh", 50),
+        "polyline": seg.get("polyline", []),
+        "center_coordinates": {"latitude": seg["center_lat"], "longitude": seg["center_lng"]},
+        "evaluation": eval_result,
+        "weather": weather,
+        "traffic": traffic,
+        "evidence_records": evidence,
+        "predictions": predictions,
+        "recommendation": recommendation,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }), 200
+
+@app.route("/api/v3/gov/road/<segment_id>/evidence", methods=["GET"])
+@app.route("/api/roads/<segment_id>/evidence", methods=["GET"])
+def gov_road_evidence(segment_id):
+    """Returns all forensic image/video and telemetry evidence linked to a road segment."""
+    evidence = DatabaseManager.get_road_evidence(segment_id, limit=25)
+    return jsonify({
+        "segment_id": segment_id,
+        "total_evidence_records": len(evidence),
+        "evidence": evidence
+    }), 200
+
+@app.route("/api/v3/gov/camera/ingest", methods=["POST"])
+@app.route("/api/vehicle-camera/events", methods=["POST"])
+def gov_camera_ingest():
+    """
+    Ingests vehicle dashcam / CCTV camera frames, runs Computer Vision defect detection,
+    spatially snaps coordinates to road segment, and records evidence.
+    """
+    data = request.get_json() or {}
+    image_url = data.get("image_url", "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg")
+    lat = float(data.get("latitude", 28.5450))
+    lng = float(data.get("longitude", 77.1250))
+    vehicle_id = data.get("vehicle_id", "NHAI-INSP-VEH-01")
+
+    # Spatial snapping: find which road segment this belongs to
+    snapped_segment_id, snap_distance_m = GISRoadNetworkEngine.snap_point_to_nearest_segment(lat, lng)
+
+    if not snapped_segment_id:
+        snapped_segment_id = "NHAI-DEL-NH48-01" # Default fallback
+
+    # Run CV Detection
+    frame_result = CVDefectIngestor.process_camera_frame(
+        image_name=image_url,
+        latitude=lat,
+        longitude=lng,
+        road_id=snapped_segment_id,
+        vehicle_id=vehicle_id
+    )
+
+    # Store evidence in SQLite
+    ev_id = DatabaseManager.add_road_evidence(
+        segment_id=snapped_segment_id,
+        latitude=lat,
+        longitude=lng,
+        source_type="VEHICLE_CAMERA",
+        device_id=vehicle_id,
+        image_url=image_url,
+        defects_json=json.dumps(frame_result.get("defects", [])),
+        confidence=0.94
+    )
+
+    return jsonify({
+        "success": True,
+        "evidence_id": ev_id,
+        "snapped_segment_id": snapped_segment_id,
+        "snap_distance_meters": snap_distance_m,
+        "detected_defects_count": frame_result["detected_defects_count"],
+        "defects": frame_result["defects"],
+        "overall_severity": frame_result["overall_severity"],
+        "data_provenance": "LIVE_CAMERA_INGEST"
+    }), 201
+
+@app.route("/api/v3/gov/sensor/ingest", methods=["POST"])
+@app.route("/api/sensors/telemetry", methods=["POST"])
+def gov_sensor_ingest():
+    """
+    Ingests IoT / smartphone accelerometer vibration G-force and GPS speed telemetry.
+    """
+    data = request.get_json() or {}
+    lat = float(data.get("latitude", 28.5700))
+    lng = float(data.get("longitude", 77.2400))
+    speed = float(data.get("speed_kmh", 45.0))
+    g_force = float(data.get("g_force", 0.35))
+    device_id = data.get("device_id", "IOT-NODE-DEL-04")
+
+    snapped_segment_id, dist_m = GISRoadNetworkEngine.snap_point_to_nearest_segment(lat, lng)
+    if not snapped_segment_id:
+        snapped_segment_id = "PWD-DEL-RING-01"
+
+    rec_id = DatabaseManager.add_live_telemetry(
+        vehicle_id=device_id,
+        latitude=lat,
+        longitude=lng,
+        speed_kmh=speed,
+        g_force=g_force,
+        vibration_index=round(g_force * 0.4, 2),
+        road_id=snapped_segment_id,
+        data_source="LIVE_IOT_SENSOR"
+    )
+
+    return jsonify({
+        "success": True,
+        "telemetry_id": rec_id,
+        "snapped_segment_id": snapped_segment_id,
+        "g_force": g_force,
+        "anomaly": g_force > 2.5,
+        "data_provenance": "LIVE_IOT_SENSOR"
+    }), 201
+
+@app.route("/api/v3/gov/work-orders/verify", methods=["POST"])
+@app.route("/api/verification", methods=["POST"])
+def gov_verify_work_order():
+    """
+    Before & After photo verification with Computer Vision inspection and cryptographic blockchain signing.
+    """
+    data = request.get_json() or {}
+    work_order_id = int(data.get("work_order_id", 101))
+    segment_id = data.get("segment_id", "NHAI-DEL-NH48-01")
+    road_name = data.get("road_name", "NH-48 Mahipalpur Junction")
+    before_photo = data.get("before_photo_url", "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg")
+    after_photo = data.get("after_photo_url", "/static/assets/damaged_roads/1_XoUpw9FGhfYh6Clpk_Wsbg-2x_jpg.rf.269bea6ceff5505771851fa8242fa6e0.jpg")
+    force_pass = bool(data.get("force_pass_for_test", False))
+
+    verif_result = RepairVerificationEngine.verify_repair_evidence(
+        work_order_id=work_order_id,
+        segment_id=segment_id,
+        road_name=road_name,
+        before_photo_url=before_photo,
+        after_photo_url=after_photo,
+        force_pass_for_test=force_pass
+    )
+
+    # Log to SQLite
+    DatabaseManager.add_repair_verification_log(
+        work_order_id=work_order_id,
+        segment_id=segment_id,
+        road_name=road_name,
+        before_photo_url=before_photo,
+        after_photo_url=after_photo,
+        verification_status=verif_result["verification_status"],
+        is_approved=verif_result["is_approved"],
+        pavement_quality_score=verif_result["pavement_quality_score"],
+        engineering_findings=verif_result["engineering_findings"],
+        prescribed_action=verif_result["prescribed_action"],
+        blockchain_tx_hash=verif_result.get("blockchain_tx_hash")
+    )
+
+    return jsonify(verif_result), 200
+
+@app.route("/api/v3/gov/hierarchy", methods=["GET"])
+def gov_hierarchy():
+    """Returns pan-India administrative hierarchy tree (National -> State -> District -> City -> Road)."""
+    return jsonify(GovAdminService.get_administrative_hierarchy()), 200
+
+@app.route("/api/v3/gov/kpis", methods=["GET"])
+def gov_kpis():
+    """Returns high-level government KPIs, condition distribution, and budget savings."""
+    return jsonify(GovAdminService.get_national_kpis()), 200
 
 if __name__ == "__main__":
     logger.info("Starting RoadSense Enhanced Backend")

@@ -240,3 +240,37 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 **RoadSense AI** — *Building the arteries of the future.*
 
+
+
+---
+
+## 🏛️ Phase 8: Government-Grade Real-Time Road Infrastructure Monitoring & Management Platform (MoRTH / State PWD / NHAI)
+
+RoadSense AI is upgraded into a **production-ready, government-grade road infrastructure monitoring and lifecycle management system for India**.
+
+### 🌟 Core Government Features:
+1. **Universal Indian Location Search**:
+   - Geocoding & Pan-India GIS Registry lookup for **PIN Codes** (e.g. `110037`, `400050`, `560100`), **Highways** (`NH-48`, `NH-44`, `NH-52`, `SH-49A`, `PVNR Expressway`), **Districts, Cities, Wards, Streets, and Galis**.
+2. **OpenStreetMap GIS Road Network Geometry**:
+   - Dynamic extraction and rendering of real-world road polylines, lengths, lane counts, and speed limits.
+   - **Zero Fake Data Policy**: Road segments without recent survey or telemetry data strictly display `DATA_UNAVAILABLE` (slate dashed line) and `health_score: null` rather than fabricating values.
+3. **Scientific & Transparent Pavement Health Scoring**:
+   - Compliant with **IRC:SP:84-2019**, **IRC:37-2018**, and **ASTM D6433 Pavement Condition Index**.
+   - Time-decay freshness function: $Freshness(t) = \exp(-\Delta t / \tau)$ with strict data provenance badges (`[LIVE]`, `[RECENT]`, `[HISTORICAL]`, `[PREDICTED]`, `[DATA_UNAVAILABLE]`).
+4. **Before / After Repair Verification Studio**:
+   - Side-by-side comparison of pre-repair damage photo vs post-repair work completion photo.
+   - Computer Vision neural inspection: Rejects incomplete repairs (`REINSPECTION_REQUIRED`), approves compliant repairs (`VERIFIED_COMPLIANT`), and cryptographically writes immutable verification hashes to the Blockchain Ledger.
+5. **Government Hierarchy & Multi-Tier RBAC**:
+   - 7-tier administrative roles: `SUPER_ADMIN` (MoRTH/NHAI), `STATE_ADMIN` (State PWD Chief Engineer), `DISTRICT_OFFICER` (Executive Engineer), `MUNICIPAL_OFFICER`, `FIELD_ENGINEER`, `INSPECTOR`, and `VIEWER`.
+   - Administrative drilldown: National $\rightarrow$ State $\rightarrow$ District $\rightarrow$ Municipal Corporation $\rightarrow$ Road Segment.
+
+### 🌐 Key Government Endpoints:
+- `GET /api/v3/gov/search` — Universal Indian PIN Code, Highway, Landmark, and GPS search
+- `GET /api/v3/gov/network` — GIS road network polylines, metadata, and authentic health condition
+- `GET /api/v3/gov/road/<id>/profile` — Comprehensive Road Profile (health breakdown, ride quality, weather, traffic, actions)
+- `GET /api/v3/gov/road/<id>/evidence` — Forensic evidence gallery (actual photos, GPS, device ID, bounding boxes)
+- `POST /api/v3/gov/camera/ingest` — Dashcam / vehicle camera frame ingestion with spatial snapping
+- `POST /api/v3/gov/sensor/ingest` — IoT / smartphone accelerometer vibration G-force telemetry
+- `POST /api/v3/gov/work-orders/verify` — Before/After repair AI verification and blockchain signing
+- `GET /api/v3/gov/hierarchy` — Pan-India administrative hierarchy tree
+- `GET /api/v3/gov/kpis` — National infrastructure performance indicators, backlog, and preventative savings

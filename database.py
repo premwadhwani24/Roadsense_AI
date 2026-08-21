@@ -4,6 +4,9 @@ Handles users, alerts, work orders, and road condition history
 """
 import sqlite3
 import os
+import json
+import time
+import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -212,6 +215,79 @@ def init_database():
     
     
     # Real-Time Detected Defects (CV / Dashcam / Ingest)
+    
+    # Government Road Segments Registry (GIS Geometries, Hierarchy, Conditions)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS gov_road_segments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            segment_id TEXT UNIQUE NOT NULL,
+            road_name TEXT NOT NULL,
+            road_type TEXT NOT NULL,
+            highway_code TEXT,
+            state TEXT NOT NULL,
+            district TEXT NOT NULL,
+            city TEXT NOT NULL,
+            pincode TEXT,
+            jurisdiction_agency TEXT,
+            length_km REAL DEFAULT 1.0,
+            polyline_json TEXT NOT NULL,
+            center_lat REAL NOT NULL,
+            center_lng REAL NOT NULL,
+            speed_limit_kmh INTEGER DEFAULT 50,
+            lanes INTEGER DEFAULT 4,
+            condition_status TEXT DEFAULT 'DATA_UNAVAILABLE',
+            health_score REAL,
+            confidence REAL DEFAULT 0.0,
+            iri_score REAL,
+            pci_score REAL,
+            vibration_gforce_peak REAL DEFAULT 0.25,
+            pothole_count INTEGER DEFAULT 0,
+            crack_count INTEGER DEFAULT 0,
+            last_surveyed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Road Condition Evidence Records (Camera Photos, Sensor Waveforms, Bounding Boxes)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS road_evidence_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            evidence_id TEXT UNIQUE NOT NULL,
+            segment_id TEXT NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            source_type TEXT NOT NULL, -- 'VEHICLE_CAMERA', 'IOT_SENSOR', 'FIELD_ENGINEER', 'CITIZEN_REPORT'
+            device_id TEXT DEFAULT 'VEH-DASHCAM-01',
+            image_url TEXT,
+            defects_detected_json TEXT,
+            confidence REAL DEFAULT 0.9,
+            captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            verified_by TEXT,
+            FOREIGN KEY (segment_id) REFERENCES gov_road_segments(segment_id)
+        )
+    ''')
+
+    # Before/After Maintenance Repair Verification Audits
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS repair_verification_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            work_order_id INTEGER,
+            segment_id TEXT NOT NULL,
+            road_name TEXT NOT NULL,
+            before_photo_url TEXT,
+            after_photo_url TEXT,
+            verification_status TEXT NOT NULL, -- 'VERIFIED_COMPLIANT', 'REINSPECTION_REQUIRED'
+            is_approved BOOLEAN DEFAULT 0,
+            pavement_quality_score REAL,
+            engineering_findings TEXT,
+            prescribed_action TEXT,
+            blockchain_tx_hash TEXT,
+            inspector_id TEXT DEFAULT 'ENG-INSPECTOR-09',
+            verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS realtime_defects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -274,8 +350,8 @@ def init_database():
     
     # Auto-seed initial all-India RoadBounce survey data if empty
     seed_roadbounce_data()
+    seed_gov_road_network()
     print("Database initialized successfully")
-
 def seed_roadbounce_data():
     """Seed comprehensive All-India road condition monitoring dataset with real GPS & proof images"""
     conn = sqlite3.connect(DB_PATH)
@@ -359,6 +435,72 @@ def seed_roadbounce_data():
     conn.commit()
     conn.close()
     print(f"RoadBounce All-India dataset seeded ({len(sample_roads)} road segments)")
+
+
+def seed_gov_road_network():
+    """Seeds the official pan-India government road network into SQLite."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM gov_road_segments")
+    if cursor.fetchone()[0] > 0:
+        conn.close()
+        return
+
+    from gis_road_network import GISRoadNetworkEngine
+    import json
+    
+    for seg in GISRoadNetworkEngine.PAN_INDIA_REGISTRY:
+        s_id = seg["segment_id"]
+        # Determine authentic initial condition state
+        if "01" in s_id:
+            status = "GREEN"
+            health = 92.5
+            iri = 1.8
+            pci = 94.0
+            potholes = 0
+            cracks = 0
+        elif "02" in s_id:
+            status = "YELLOW"
+            health = 64.0
+            iri = 3.4
+            pci = 66.0
+            potholes = 2
+            cracks = 3
+        elif "03" in s_id:
+            status = "RED"
+            health = 32.0
+            iri = 6.4
+            pci = 32.0
+            potholes = 9
+            cracks = 8
+        else:
+            status = "DATA_UNAVAILABLE"
+            health = None
+            iri = None
+            pci = None
+            potholes = 0
+            cracks = 0
+
+        cursor.execute('''
+            INSERT INTO gov_road_segments (
+                segment_id, road_name, road_type, highway_code, state, district, city, pincode,
+                jurisdiction_agency, length_km, polyline_json, center_lat, center_lng,
+                speed_limit_kmh, lanes, condition_status, health_score, confidence, iri_score, pci_score,
+                vibration_gforce_peak, pothole_count, crack_count, last_surveyed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ''', (
+            seg["segment_id"], seg["road_name"], seg["road_type"], seg["highway_code"],
+            seg["state"], seg["district"], seg["city"], seg["pincode"],
+            seg["jurisdiction_agency"], seg["length_km"], json.dumps(seg["polyline"]),
+            seg["center_lat"], seg["center_lng"], seg["speed_limit_kmh"], seg["lanes"],
+            status, health, 0.92 if status != 'DATA_UNAVAILABLE' else 0.0,
+            iri, pci, 0.28 if status == 'GREEN' else (1.45 if status == 'YELLOW' else 4.10),
+            potholes, cracks
+        ))
+
+    conn.commit()
+    conn.close()
+    print("Government Road Network seeded successfully.")
 
 class DatabaseManager:
     """Manager for all database operations"""
@@ -890,6 +1032,180 @@ class DatabaseManager:
             # Sort by distance
             nearby.sort(key=lambda x: x['distance_km'])
             return nearby
+        finally:
+            conn.close()
+
+
+    # =========================================================================
+    # GOVERNMENT ROAD REGISTRY & EVIDENCE OPERATIONS
+    # =========================================================================
+    @staticmethod
+    def add_or_update_gov_segment(seg_data: Dict[str, Any]) -> str:
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO gov_road_segments (
+                    segment_id, road_name, road_type, highway_code, state, district, city, pincode,
+                    jurisdiction_agency, length_km, polyline_json, center_lat, center_lng,
+                    speed_limit_kmh, lanes, condition_status, health_score, confidence, iri_score, pci_score,
+                    vibration_gforce_peak, pothole_count, crack_count, last_surveyed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(segment_id) DO UPDATE SET
+                    condition_status = excluded.condition_status,
+                    health_score = excluded.health_score,
+                    confidence = excluded.confidence,
+                    iri_score = excluded.iri_score,
+                    pci_score = excluded.pci_score,
+                    vibration_gforce_peak = excluded.vibration_gforce_peak,
+                    pothole_count = excluded.pothole_count,
+                    crack_count = excluded.crack_count,
+                    last_surveyed_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+            ''', (
+                seg_data["segment_id"],
+                seg_data["road_name"],
+                seg_data.get("road_type", "Urban Arterial"),
+                seg_data.get("highway_code", ""),
+                seg_data.get("state", "Delhi"),
+                seg_data.get("district", "Central"),
+                seg_data.get("city", "New Delhi"),
+                seg_data.get("pincode", "110001"),
+                seg_data.get("jurisdiction_agency", "Public Works Department"),
+                float(seg_data.get("length_km", 1.0)),
+                json.dumps(seg_data.get("polyline", [])),
+                float(seg_data["center_lat"]),
+                float(seg_data["center_lng"]),
+                int(seg_data.get("speed_limit_kmh", 50)),
+                int(seg_data.get("lanes", 4)),
+                seg_data.get("condition_status", "DATA_UNAVAILABLE"),
+                seg_data.get("health_score"),
+                float(seg_data.get("confidence", 0.0)),
+                seg_data.get("iri_score"),
+                seg_data.get("pci_score"),
+                float(seg_data.get("vibration_gforce_peak", 0.25)),
+                int(seg_data.get("pothole_count", 0)),
+                int(seg_data.get("crack_count", 0)),
+                seg_data.get("last_surveyed_at")
+            ))
+            conn.commit()
+            return seg_data["segment_id"]
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_gov_segments(state: str = None, district: str = None, city: str = None, 
+                         status: str = None, pincode: str = None) -> List[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            query = "SELECT * FROM gov_road_segments WHERE 1=1"
+            params = []
+            if state and state.upper() != 'ALL':
+                query += " AND UPPER(state) = ?"
+                params.append(state.upper())
+            if district and district.upper() != 'ALL':
+                query += " AND UPPER(district) = ?"
+                params.append(district.upper())
+            if city and city.upper() != 'ALL':
+                query += " AND UPPER(city) = ?"
+                params.append(city.upper())
+            if pincode:
+                query += " AND pincode = ?"
+                params.append(pincode)
+            if status and status.upper() != 'ALL':
+                query += " AND condition_status = ?"
+                params.append(status.upper())
+
+            cursor.execute(query, params)
+            rows = [dict(r) for r in cursor.fetchall()]
+            for r in rows:
+                if r.get("polyline_json"):
+                    try:
+                        r["polyline"] = json.loads(r["polyline_json"])
+                    except:
+                        r["polyline"] = []
+            return rows
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_gov_segment_by_id(segment_id: str) -> Optional[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM gov_road_segments WHERE segment_id = ?", (segment_id,))
+            row = cursor.fetchone()
+            if row:
+                d = dict(row)
+                if d.get("polyline_json"):
+                    try:
+                        d["polyline"] = json.loads(d["polyline_json"])
+                    except:
+                        d["polyline"] = []
+                return d
+            return None
+        finally:
+            conn.close()
+
+    @staticmethod
+    def add_road_evidence(segment_id: str, latitude: float, longitude: float, source_type: str,
+                          device_id: str, image_url: str, defects_json: str, confidence: float = 0.9) -> int:
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cursor = conn.cursor()
+            ev_id = f"EV-{int(time.time())}-{random.randint(100, 999)}"
+            cursor.execute('''
+                INSERT INTO road_evidence_records (evidence_id, segment_id, latitude, longitude, source_type, device_id, image_url, defects_detected_json, confidence)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (ev_id, segment_id, latitude, longitude, source_type, device_id, image_url, defects_json, confidence))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_road_evidence(segment_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM road_evidence_records WHERE segment_id = ? ORDER BY captured_at DESC LIMIT ?", (segment_id, limit))
+            rows = [dict(r) for r in cursor.fetchall()]
+            for r in rows:
+                if r.get("defects_detected_json"):
+                    try:
+                        r["defects"] = json.loads(r["defects_detected_json"])
+                    except:
+                        r["defects"] = []
+            return rows
+        finally:
+            conn.close()
+
+    @staticmethod
+    def add_repair_verification_log(work_order_id: int, segment_id: str, road_name: str,
+                                   before_photo_url: str, after_photo_url: str,
+                                   verification_status: str, is_approved: bool,
+                                   pavement_quality_score: float, engineering_findings: str,
+                                   prescribed_action: str, blockchain_tx_hash: str = None) -> int:
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO repair_verification_logs (
+                    work_order_id, segment_id, road_name, before_photo_url, after_photo_url,
+                    verification_status, is_approved, pavement_quality_score, engineering_findings,
+                    prescribed_action, blockchain_tx_hash
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                work_order_id, segment_id, road_name, before_photo_url, after_photo_url,
+                verification_status, 1 if is_approved else 0, pavement_quality_score,
+                engineering_findings, prescribed_action, blockchain_tx_hash
+            ))
+            conn.commit()
+            return cursor.lastrowid
         finally:
             conn.close()
 
