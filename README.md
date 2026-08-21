@@ -77,12 +77,12 @@ roadsense_webapp/
 - Python 3.9 or higher
 - `pip` package manager
 
-### Installation
+### Installation & Setup
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/roadsense-ai.git
-   cd roadsense-ai
+   git clone https://github.com/premwadhwani24/Roadsense_AI.git
+   cd Roadsense_AI
    ```
 
 2. **Set up Virtual Environment**
@@ -96,17 +96,27 @@ roadsense_webapp/
    pip install -r requirements.txt
    ```
 
-### Configuration
-Create a `.env` file or export the following environment variables:
-```bash
-export FLASK_SECRET_KEY="your-secret-key"
-export GOOGLE_MAPS_KEY="your-api-key"
-export OPENWEATHER_KEY="your-api-key"
-export TOMTOM_KEY="your-api-key"
-# For Google Login
-export GOOGLE_CLIENT_ID="your-id"
-export GOOGLE_CLIENT_SECRET="your-secret"
-```
+4. **Environment Configuration**
+   Copy the provided `.env.example` to create your local environment file:
+   ```bash
+   copy .env.example .env    # On Windows
+   # or
+   cp .env.example .env      # On Linux/macOS
+   ```
+   Open the `.env` file and populate your custom configuration settings:
+   ```env
+   FLASK_SECRET_KEY="your-secret-key"
+   GOOGLE_MAPS_KEY="your-google-maps-api-key"
+   OPENWEATHER_KEY="your-openweather-api-key"
+   TOMTOM_KEY="your-tomtom-api-key"
+   ```
+
+5. **Initialize Database & Verify Setup**
+   Run the setup script to initialize the SQLite schema, verify local environment variables, and create default admin credentials:
+   ```bash
+   python setup.py
+   ```
+   *Note: On first run, the database will automatically initialize default admin accounts (e.g. `admin` / `admin123`).*
 
 ---
 

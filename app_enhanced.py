@@ -18,6 +18,9 @@ from flask import Flask, render_template, request, jsonify, send_file, abort, re
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, set_access_cookies, create_access_token
 
 # Import enhanced modules
+from dotenv import load_dotenv
+load_dotenv()
+
 from database import init_database, DatabaseManager
 from auth import setup_auth, authenticate_user, register_user, check_user_role
 from notifications import NotificationManager
@@ -42,8 +45,8 @@ GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
 OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
 TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
 USE_MOCK_IF_NO_KEYS = True
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', "")
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', "")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("roadsense_backend")
@@ -290,11 +293,13 @@ def create_alert():
 def resolve_alert(alert_id):
     """Mark alert as resolved"""
     conn = sqlite3.connect('roadsense.db')
-    cursor = conn.cursor()
-    cursor.execute('UPDATE alerts SET status = ?, resolved_at = ? WHERE id = ?',
-                  ('resolved', datetime.now(), alert_id))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE alerts SET status = ?, resolved_at = ? WHERE id = ?',
+                      ('resolved', datetime.now(), alert_id))
+        conn.commit()
+    finally:
+        conn.close()
     return jsonify({"message": "Alert resolved"}), 200
 
 # ====================================================================================
@@ -340,16 +345,18 @@ def update_work_order(work_order_id):
     actual_cost = data.get("actual_cost")
     
     conn = sqlite3.connect('roadsense.db')
-    cursor = conn.cursor()
-    
-    if status:
-        cursor.execute('UPDATE work_orders SET status = ? WHERE id = ?', (status, work_order_id))
-    
-    if actual_cost is not None:
-        cursor.execute('UPDATE work_orders SET actual_cost = ? WHERE id = ?', (actual_cost, work_order_id))
-    
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        
+        if status:
+            cursor.execute('UPDATE work_orders SET status = ? WHERE id = ?', (status, work_order_id))
+        
+        if actual_cost is not None:
+            cursor.execute('UPDATE work_orders SET actual_cost = ? WHERE id = ?', (actual_cost, work_order_id))
+        
+        conn.commit()
+    finally:
+        conn.close()
     
     return jsonify({"message": "Work order updated"}), 200
 
@@ -498,13 +505,15 @@ def get_citizen_reports():
 def verify_citizen_report(report_id):
     """Verify citizen report"""
     conn = sqlite3.connect('roadsense.db')
-    cursor = conn.cursor()
-    cursor.execute(
-        'UPDATE citizen_reports SET verification_count = verification_count + 1, verified = 1 WHERE id = ?',
-        (report_id,)
-    )
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE citizen_reports SET verification_count = verification_count + 1, verified = 1 WHERE id = ?',
+            (report_id,)
+        )
+        conn.commit()
+    finally:
+        conn.close()
     
     return jsonify({"message": "Report verified"}), 200
 
@@ -519,14 +528,17 @@ def get_city_budget(city):
     year = request.args.get("year", default=datetime.now().year, type=int)
     
     conn = sqlite3.connect('roadsense.db')
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM budget_tracking WHERE city = ? AND year = ?', (city, year))
-    row = cursor.fetchone()
-    conn.close()
+    try:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM budget_tracking WHERE city = ? AND year = ?', (city, year))
+        row = cursor.fetchone()
+        result = dict(row) if row else None
+    finally:
+        conn.close()
     
-    if row:
-        return jsonify(dict(row)), 200
+    if result:
+        return jsonify(result), 200
     
     return jsonify({"error": "Budget not found"}), 404
 
@@ -539,14 +551,16 @@ def set_city_budget(city):
     allocated_budget = data.get("allocated_budget")
     
     conn = sqlite3.connect('roadsense.db')
-    cursor = conn.cursor()
-    cursor.execute(
-        'INSERT OR REPLACE INTO budget_tracking (city, year, allocated_budget, remaining) '
-        'VALUES (?, ?, ?, ?)',
-        (city, year, allocated_budget, allocated_budget)
-    )
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT OR REPLACE INTO budget_tracking (city, year, allocated_budget, remaining) '
+            'VALUES (?, ?, ?, ?)',
+            (city, year, allocated_budget, allocated_budget)
+        )
+        conn.commit()
+    finally:
+        conn.close()
     
     return jsonify({"message": "Budget updated"}), 200
 
@@ -672,10 +686,12 @@ def get_budget_prediction(city):
         # Get all roads in the city
         roads = []
         conn = sqlite3.connect('roadsense.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT road_id FROM alerts WHERE city = ?", (city,))
-        roads = [r[0] for r in cursor.fetchall()]
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT road_id FROM alerts WHERE city = ?", (city,))
+            roads = [r[0] for r in cursor.fetchall()]
+        finally:
+            conn.close()
         
         if not roads:
             return jsonify({"status": "no_roads_found", "city": city}), 404

@@ -74,11 +74,13 @@ class NotificationManager:
         # Get all engineers/admins
         import sqlite3
         conn = sqlite3.connect('roadsense.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE role IN ("admin", "engineer")')
-        engineers = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        try:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM users WHERE role IN ("admin", "engineer")')
+            engineers = [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
         
         # Notify each
         for engineer in engineers:
@@ -131,15 +133,18 @@ class NotificationManager:
         """Notify stakeholders of repair completion"""
         import sqlite3
         conn = sqlite3.connect('roadsense.db')
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT * FROM work_orders WHERE id = ?', (work_order_id,))
-        work_order = dict(cursor.fetchone())
-        
-        cursor.execute('SELECT email FROM users WHERE id = ?', (user_id,))
-        user = cursor.fetchone()
-        conn.close()
+        try:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT * FROM work_orders WHERE id = ?', (work_order_id,))
+            work_order_row = cursor.fetchone()
+            work_order = dict(work_order_row) if work_order_row else None
+            
+            cursor.execute('SELECT email FROM users WHERE id = ?', (user_id,))
+            user = cursor.fetchone()
+        finally:
+            conn.close()
         
         if user and work_order:
             subject = f"Repair Completed: {work_order['road_name']}"

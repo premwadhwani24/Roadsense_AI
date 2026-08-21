@@ -8,6 +8,18 @@ import requests
 import json
 import sys
 
+# Enforce UTF-8 output on standard console streams to prevent crashes on emojis (✅ / ❌) in Windows environments
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+if sys.stderr.encoding != 'utf-8':
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
 BASE_URL = "http://localhost:5000"
 TOKEN = None
 
