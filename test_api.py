@@ -500,6 +500,176 @@ def test_irc_assistant_chat():
         print(f"❌ Error: {e}")
         return False
 
+def test_roadbounce_roads_list():
+    """Test 22: RoadBounce All-India Roads List Endpoint"""
+    print_section("Test 22: RoadBounce All-India Roads List")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/roadbounce/roads")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ RoadBounce roads fetch successful")
+            print(f"   Total Roads: {data.get('total')}")
+            print(f"   Green: {data.get('summary', {}).get('green')}, Yellow: {data.get('summary', {}).get('yellow')}, Red: {data.get('summary', {}).get('red')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_roadbounce_remediation():
+    """Test 23: RoadBounce Remediation & Status Conversion (Yellow -> Green)"""
+    print_section("Test 23: RoadBounce Remediation (Convert to Green)")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/roadbounce/remediate",
+            json={
+                "road_id": "RB-DEL-02",
+                "target_status": "GREEN",
+                "remediated_by": "Delhi PWD Fast Response Team",
+                "notes": "Micro-surfacing overlay completed."
+            }
+        )
+        if response.status_code == 200:
+            print("✅ RoadBounce remediation test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_roadbounce_survey_ingest():
+    """Test 24: RoadBounce Smartphone Survey Telemetry Ingest"""
+    print_section("Test 24: RoadBounce Survey Ingest")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/roadbounce/survey-ingest",
+            json={
+                "road_id": "RB-TEST-99",
+                "road_name": "Test Mobile Survey Corridor",
+                "city": "Pune",
+                "state": "Maharashtra",
+                "latitude": 18.5204,
+                "longitude": 73.8567,
+                "iri_score": 1.9,
+                "pci_score": 92.0,
+                "vibration_gforce_peak": 0.35,
+                "speed_kmh": 48.0,
+                "pothole_count": 0,
+                "crack_severity": "None",
+                "proof_image_url": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg",
+                "recommended_action": "Optimal ride quality confirmed via smartphone survey."
+            }
+        )
+        if response.status_code in [200, 201]:
+            print("✅ RoadBounce survey ingest test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_roadbounce_kpis():
+    """Test 25: RoadBounce KPIs & Preventative Cost Savings"""
+    print_section("Test 25: RoadBounce KPIs & Savings")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/roadbounce/kpis")
+        if response.status_code == 200:
+            print("✅ RoadBounce KPIs test successful")
+            print(json.dumps(response.json(), indent=2))
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_roadbounce_proof():
+    """Test 26: RoadBounce Forensic Proof Endpoint"""
+    print_section("Test 26: RoadBounce Forensic Proof")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/roadbounce/proof/RB-DEL-03")
+        if response.status_code == 200:
+            print("✅ RoadBounce forensic proof test successful")
+            data = response.json()
+            print(f"   Road: {data.get('road_name')}")
+            print(f"   Proof Image: {data.get('proof_image_url')}")
+            print(f"   Coordinates: {data.get('latitude')}, {data.get('longitude')}")
+            print(f"   Condition: {data.get('condition_status')} (IRI: {data.get('iri_score')})")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_rdd_dataset_stats():
+    """Test 27: RDD2022 Dataset Statistics Endpoint"""
+    print_section("Test 27: RDD2022 Dataset Statistics")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/rdd/stats")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ RDD2022 dataset stats fetch successful")
+            print(f"   Dataset: {data.get('dataset_name')}")
+            print(f"   Total Images: {data.get('total_images')}, Annotated: {data.get('total_annotated_instances')}")
+            print(f"   India Subset: {data.get('countries', {}).get('India', {}).get('images')} images")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_rdd_classes():
+    """Test 28: RDD2022 Standard Damage Taxonomy Endpoint"""
+    print_section("Test 28: RDD2022 Class Taxonomy")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/rdd/classes")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ RDD2022 class taxonomy fetch successful")
+            print(f"   Classes Tracked: {list(data.keys())}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_rdd_detect():
+    """Test 29: RDD2022 AI Object Detection Inference Endpoint"""
+    print_section("Test 29: RDD2022 Object Detection Inference")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/rdd/detect",
+            json={"image_path": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg"}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ RDD2022 inference test successful")
+            print(f"   Objects Found: {data.get('total_objects_found')}")
+            print(f"   Severity: {data.get('overall_severity')}")
+            print(f"   Inference Time: {data.get('inference_time_ms')} ms")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -543,6 +713,14 @@ def run_all_tests():
     results.append(("RAMS Asset Inventory", test_rams_asset_inventory()))
     results.append(("Domestic Presence", test_domestic_presence()))
     results.append(("IRC AI Assistant", test_irc_assistant_chat()))
+    results.append(("RoadBounce Roads List", test_roadbounce_roads_list()))
+    results.append(("RoadBounce Remediation Conversion", test_roadbounce_remediation()))
+    results.append(("RoadBounce Survey Ingest", test_roadbounce_survey_ingest()))
+    results.append(("RoadBounce KPIs & Savings", test_roadbounce_kpis()))
+    results.append(("RoadBounce Forensic Proof", test_roadbounce_proof()))
+    results.append(("RDD2022 Dataset Statistics", test_rdd_dataset_stats()))
+    results.append(("RDD2022 Class Taxonomy", test_rdd_classes()))
+    results.append(("RDD2022 Object Detection Inference", test_rdd_detect()))
     
     # Print summary
     print_section("Test Summary")
@@ -568,4 +746,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nTests cancelled by user")
         sys.exit(0)
+
 

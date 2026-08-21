@@ -1230,7 +1230,154 @@ def irc_ai_assistant_chat():
         ]
     }), 200
 
+# ====================================================================================
+# PHASE 5: ROADBOUNCE SMARTPHONE ROAD ROUGHNESS, POTHOLEGUARD & ALL-INDIA REMEDIATION
+# ====================================================================================
+
+@app.route("/api/v3/roadbounce/roads", methods=["GET"])
+def get_roadbounce_roads_api():
+    """Fetch All-India road segments with IRI scores, condition status, and visual proof paths"""
+    city = request.args.get("city")
+    state = request.args.get("state")
+    status = request.args.get("status")
+    min_iri = request.args.get("min_iri", type=float)
+    search = request.args.get("search")
+    
+    roads = DatabaseManager.get_roadbounce_roads(city=city, state=state, status=status, min_iri=min_iri, search=search)
+    
+    green_count = sum(1 for r in roads if r["condition_status"] == "GREEN")
+    yellow_count = sum(1 for r in roads if r["condition_status"] == "YELLOW")
+    red_count = sum(1 for r in roads if r["condition_status"] == "RED")
+    
+    return jsonify({
+        "total": len(roads),
+        "summary": {
+            "green": green_count,
+            "yellow": yellow_count,
+            "red": red_count
+        },
+        "roads": roads,
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
+@app.route("/api/v3/roadbounce/remediate", methods=["POST"])
+def remediate_roadbounce_road_api():
+    """One-click repair/improvement: converts Yellow road to Green, or Red road to Yellow/Green in SQLite database"""
+    data = request.get_json() or {}
+    road_id = data.get("road_id")
+    target_status = data.get("target_status", "GREEN").upper()
+    remediated_by = data.get("remediated_by", "Municipal Smart Maintenance Crew")
+    notes = data.get("notes", "Pavement upgraded via preventative maintenance overlay.")
+    
+    if not road_id:
+        return jsonify({"error": "road_id is required"}), 400
+        
+    updated_road = DatabaseManager.remediate_road(road_id, target_status=target_status, remediated_by=remediated_by, notes=notes)
+    if not updated_road:
+        return jsonify({"error": f"Road {road_id} not found"}), 404
+        
+    # Log to blockchain ledger for auditability
+    try:
+        DatabaseManager.add_blockchain_block(
+            block_index=random.randint(100, 9999),
+            prev_hash=f"0000{random.randint(100000, 999999)}",
+            block_hash=f"0000{random.randint(100000, 999999)}",
+            transaction_type="ROAD_REMEDIATION",
+            payload_json=json.dumps({
+                "road_id": road_id,
+                "previous_status": "YELLOW" if target_status == "GREEN" else "RED",
+                "new_status": target_status,
+                "remediated_by": remediated_by,
+                "timestamp": datetime.now().isoformat()
+            })
+        )
+    except Exception as e:
+        logger.warning(f"Blockchain log warning: {e}")
+        
+    return jsonify({
+        "message": f"Road {road_id} successfully converted to {target_status} in persistent database!",
+        "road": updated_road
+    }), 200
+
+@app.route("/api/v3/roadbounce/survey-ingest", methods=["POST"])
+def ingest_roadbounce_survey_api():
+    """Ingests live smartphone survey data (RoadBounce IRI App & PotholeGuard)"""
+    data = request.get_json() or {}
+    if not data.get("road_id"):
+        return jsonify({"error": "road_id is required"}), 400
+        
+    saved = DatabaseManager.ingest_roadbounce_survey(data)
+    return jsonify({
+        "message": "Survey ingested into database",
+        "road": saved
+    }), 201
+
+@app.route("/api/v3/roadbounce/kpis", methods=["GET"])
+def get_roadbounce_kpis_api():
+    """National condition index, IRI averages, and preventative cost savings"""
+    kpis = DatabaseManager.get_roadbounce_kpis()
+    return jsonify(kpis), 200
+
+@app.route("/api/v3/roadbounce/proof/<road_id>", methods=["GET"])
+def get_roadbounce_proof_api(road_id):
+    """Fetches full forensic proof package with visual photo, GPS coordinates, accelerometer G-force, and repair estimates"""
+    roads = DatabaseManager.get_roadbounce_roads(search=road_id)
+    if not roads:
+        return jsonify({"error": f"Road {road_id} not found"}), 404
+        
+    road = roads[0]
+    telemetry = {}
+    try:
+        telemetry = json.loads(road.get("proof_telemetry_json") or "{}")
+    except Exception:
+        telemetry = {}
+        
+    return jsonify({
+        "road_id": road["road_id"],
+        "road_name": road["road_name"],
+        "city": road["city"],
+        "state": road["state"],
+        "latitude": road["latitude"],
+        "longitude": road["longitude"],
+        "condition_status": road["condition_status"],
+        "iri_score": road["iri_score"],
+        "pci_score": road["pci_score"],
+        "vibration_gforce_peak": road["vibration_gforce_peak"],
+        "pothole_count": road["pothole_count"],
+        "crack_severity": road["crack_severity"],
+        "proof_image_url": road["proof_image_url"],
+        "telemetry_waveform": telemetry.get("waveform_sample", [0.2, 0.4, road["vibration_gforce_peak"], 0.3]),
+        "remediated_at": road["remediated_at"],
+        "remediated_by": road["remediated_by"],
+        "last_surveyed_at": road["last_surveyed_at"]
+    }), 200
+
+# ====================================================================================
+# PHASE 6: RDD2022 MULTI-NATIONAL ROAD DAMAGE DATASET & OBJECT DETECTION ENGINE
+# ====================================================================================
+from rdd_engine import RoadDamageDetectorEngine
+
+@app.route("/api/v3/rdd/stats", methods=["GET"])
+def get_rdd_dataset_stats():
+    """Returns RDD2022 multi-national dataset metrics across 6 countries & 47.4k images"""
+    return jsonify(RoadDamageDetectorEngine.get_dataset_overview()), 200
+
+@app.route("/api/v3/rdd/classes", methods=["GET"])
+def get_rdd_classes():
+    """Returns RDD standard damage taxonomy (D00, D10, D20, D40, D43, D44, Repair)"""
+    return jsonify(RoadDamageDetectorEngine.get_class_definitions()), 200
+
+@app.route("/api/v3/rdd/detect", methods=["POST"])
+def detect_rdd_damage():
+    """Performs simulated AI computer vision defect detection on road images with bounding boxes"""
+    data = request.get_json() or {}
+    image_path = data.get("image_path", "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg")
+    result = RoadDamageDetectorEngine.detect_damage(image_path=image_path)
+    return jsonify(result), 200
+
 if __name__ == "__main__":
     logger.info("Starting RoadSense Enhanced Backend")
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+
 

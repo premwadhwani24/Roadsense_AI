@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RoadSense AI — Road Asset Management & Infrastructure Intelligence</title>
+    <title>RoadSense AI — Road Asset Management & RDD2022 Object Detection</title>
     
     <!-- External Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,7 +36,6 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Glassmorphism & UI Accents */
         .glass-nav {
             background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(16px);
@@ -46,18 +45,6 @@
 
         .hero-gradient {
             background: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08) 0%, rgba(13, 148, 136, 0.04) 50%, transparent 80%);
-        }
-
-        .stat-card-gradient {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border: 1px solid #e2e8f0;
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .stat-card-gradient:hover {
-            transform: translateY(-4px);
-            border-color: #3b82f6;
-            box-shadow: 0 12px 30px -5px rgba(37, 99, 235, 0.12);
         }
 
         .cursor-blink {
@@ -75,40 +62,50 @@
             50% { opacity: 0; }
         }
 
-        .asset-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .road-card-green { border-left: 5px solid #10b981 !important; }
+        .road-card-yellow { border-left: 5px solid #f59e0b !important; }
+        .road-card-red { border-left: 5px solid #ef4444 !important; }
 
-        .asset-card:hover {
-            transform: translateY(-6px) scale(1.03);
-            box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.18);
+        .rdd-bbox {
+            position: absolute;
+            border: 2px solid #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .rdd-label {
+            position: absolute;
+            top: -22px;
+            left: -2px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            font-family: monospace;
+            padding: 1px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body class="transition-colors duration-300">
 
-    <!-- ==========================================================================
-         1. TECH PRELOADER (RoadAthena Orbital Rings & Glow Effect)
-         ========================================================================== -->
+    <!-- PRELOADER -->
     <div id="athenaPreloader">
         <div class="relative flex items-center justify-center w-48 h-48 mb-6">
             <div class="orbital-ring ring-outer"></div>
             <div class="orbital-ring ring-inner"></div>
-            <div class="pulse-emblem text-cyan-400 text-4xl">
-                <i class="fas fa-satellite-dish"></i>
-            </div>
+            <div class="pulse-emblem text-cyan-400 text-4xl"><i class="fas fa-satellite-dish"></i></div>
         </div>
-        <h2 class="text-white text-2xl font-black tracking-wider uppercase mb-2">RoadSense <span class="text-cyan-400">Athena</span></h2>
-        <p class="text-slate-400 text-xs tracking-widest uppercase mb-4">Initializing RAMS AI Telemetry Engine...</p>
+        <h2 class="text-white text-2xl font-black tracking-wider uppercase mb-2">RoadSense <span class="text-cyan-400">AI</span></h2>
+        <p class="text-slate-400 text-xs tracking-widest uppercase mb-4">Initializing RDD2022 & RoadBounce Multi-Sensor Intelligence...</p>
         <div class="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden">
             <div id="preloaderBar" class="h-full bg-gradient-to-r from-blue-500 via-teal-400 to-cyan-300 w-0 transition-all duration-300"></div>
         </div>
         <span id="preloaderPercent" class="text-slate-500 text-xs mono mt-2">0%</span>
     </div>
 
-    <!-- ==========================================================================
-         2. NAVIGATION HEADER
-         ========================================================================== -->
+    <!-- NAVBAR -->
     <header class="sticky top-0 z-50 glass-nav transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -118,538 +115,197 @@
                 <div>
                     <span class="text-xl font-black tracking-tight text-slate-900 flex items-center gap-1.5">
                         RoadSense <span class="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">AI</span>
-                        <span class="text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200">RAMS v4.0</span>
+                        <span class="text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200">RDD2022 + RAMS v6.0</span>
                     </span>
                 </div>
             </div>
 
-            <!-- Desktop Menu -->
             <nav class="hidden lg:flex items-center gap-6 text-sm font-semibold text-slate-600">
-                <a href="#overview" class="hover:text-blue-600 transition-colors">Overview</a>
-                <a href="#asset-gallery" class="hover:text-blue-600 transition-colors">Asset Gallery</a>
-                <a href="#domestic-presence" class="hover:text-blue-600 transition-colors">Domestic Reach</a>
-                <a href="#capabilities" class="hover:text-blue-600 transition-colors">Capabilities</a>
-                <a href="#compliance-insights" class="hover:text-blue-600 transition-colors">IRC Compliance</a>
-                <a href="#operations-deck" class="hover:text-blue-600 transition-colors text-indigo-600">Operations Deck</a>
+                <a href="#all-india-monitoring" class="hover:text-blue-600 text-emerald-700"><i class="fas fa-traffic-light mr-1"></i> Road Condition</a>
+                <a href="#rdd-studio" class="hover:text-blue-600 text-blue-600"><i class="fas fa-vector-square mr-1"></i> RDD2022 CV Studio</a>
+                <a href="#asset-gallery" class="hover:text-blue-600">Asset Gallery</a>
+                <a href="#compliance-insights" class="hover:text-blue-600">IRC Compliance</a>
+                <a href="#operations-deck" class="hover:text-blue-600">Operations</a>
             </nav>
 
             <div class="flex items-center gap-3">
-                <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center">
                     <i id="themeIcon" class="fas fa-moon"></i>
                 </button>
-                <div class="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    Live AI Stream Active
-                </div>
-                <a href="#operations-deck" class="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-blue-500/25 transition-all">
-                    Launch Console <i class="fas fa-arrow-right ml-1"></i>
+                <a href="#rdd-studio" class="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/25">
+                    <i class="fas fa-crosshairs mr-1"></i> Run AI CV Inference
                 </a>
             </div>
         </div>
     </header>
 
-    <!-- ==========================================================================
-         3. LIVE TELEMETRY & IRC ALERTS MARQUEE TICKER
-         ========================================================================== -->
+    <!-- MARQUEE TICKER -->
     <div class="ticker-wrap select-none">
         <div class="ticker-content text-xs font-medium tracking-wide">
-            <span class="inline-flex items-center mx-6 text-cyan-400"><i class="fas fa-shield-alt mr-2"></i> IRC:SP:84-2019 Standard Compliant</span>
-            <span class="inline-flex items-center mx-6 text-slate-300"><i class="fas fa-satellite mr-2"></i> 190,000+ km National Highways Monitored</span>
-            <span class="inline-flex items-center mx-6 text-emerald-400"><i class="fas fa-check-circle mr-2"></i> 320+ Road Asset Categories Tracked (CV Model v4)</span>
-            <span class="inline-flex items-center mx-6 text-yellow-400"><i class="fas fa-traffic-light mr-2"></i> Adaptive Signal Engine Active: Timing 15s–60s</span>
-            <span class="inline-flex items-center mx-6 text-purple-400"><i class="fas fa-link mr-2"></i> Immutable Blockchain Audit Trail Verified</span>
-            <span class="inline-flex items-center mx-6 text-cyan-400"><i class="fas fa-shield-alt mr-2"></i> IRC:SP:84-2019 Standard Compliant</span>
-            <span class="inline-flex items-center mx-6 text-slate-300"><i class="fas fa-satellite mr-2"></i> 190,000+ km National Highways Monitored</span>
+            <span class="inline-flex items-center mx-6 text-cyan-400"><i class="fas fa-cube mr-2"></i> RDD2022 Multi-National Dataset: 47,420 Road Images (India, Japan, Norway, USA, Czech, China)</span>
+            <span class="inline-flex items-center mx-6 text-emerald-400"><i class="fas fa-check-circle mr-2"></i> 🟢 Green = Optimal Condition (IRI &lt; 2.5)</span>
+            <span class="inline-flex items-center mx-6 text-yellow-400"><i class="fas fa-tools mr-2"></i> 🟡 Yellow = Moderate Distress (Improve to Green)</span>
+            <span class="inline-flex items-center mx-6 text-rose-400"><i class="fas fa-exclamation-triangle mr-2"></i> 🔴 Red = Severe Damage with Visual & Telemetry Proofs</span>
+            <span class="inline-flex items-center mx-6 text-purple-400"><i class="fas fa-shield-alt mr-2"></i> D00 Longitudinal, D10 Transverse, D20 Alligator, D40 Pothole Standard Detection</span>
         </div>
     </div>
 
-    <!-- ==========================================================================
-         4. HERO SECTION (Dynamic Typewriter & Scale Numbers)
-         ========================================================================== -->
-    <section id="overview" class="hero-gradient relative py-12 lg:py-20 overflow-hidden">
+    <!-- HERO -->
+    <section class="hero-gradient relative py-10 lg:py-16 overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
                 
-                <!-- Hero Left Copy -->
                 <div class="lg:col-span-7 text-center lg:text-left">
-                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider mb-4">
                         <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                        Next-Gen Road Asset Management System (RAMS)
+                        RDD2022 Multi-National Dataset & Object Detection Suite
                     </div>
-                    <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight mb-6">
-                        Intelligent Road Infrastructure, Powered by <br class="hidden sm:block" />
-                        <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-500 bg-clip-text text-transparent">Athena Intelligence</span>
+                    <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+                        Intelligent Road Health & <br class="hidden sm:block" />
+                        <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-500 bg-clip-text text-transparent">Multi-National Damage Detection</span>
                     </h1>
-                    <div class="h-16 sm:h-12 mb-6">
-                        <p class="text-base sm:text-xl text-slate-600 font-medium">
+                    <div class="h-14 sm:h-10 mb-4">
+                        <p class="text-base sm:text-lg text-slate-600 font-medium">
                             <span id="typewriterText"></span><span class="cursor-blink"></span>
                         </p>
                     </div>
-                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4">
-                        <a href="#compliance-insights" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 text-sm">
-                            <i class="fas fa-clipboard-check"></i> Run IRC Compliance Check
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                        <a href="#rdd-studio" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-2">
+                            <i class="fas fa-eye"></i> RDD2022 Object Detector
                         </a>
-                        <a href="#asset-gallery" class="px-6 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 text-sm">
-                            <i class="fas fa-images"></i> Explore 320+ Asset Gallery
+                        <a href="#all-india-monitoring" class="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 text-xs shadow-sm flex items-center gap-2">
+                            <i class="fas fa-map-pin text-emerald-600"></i> All-India Condition Deck
                         </a>
                     </div>
                 </div>
 
-                <!-- Hero Right Telemetry Console Card -->
                 <div class="lg:col-span-5">
-                    <div class="bg-slate-900 rounded-2xl p-6 shadow-2xl border border-slate-800 text-slate-200 relative overflow-hidden">
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
-                            <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                                <span class="text-xs font-mono text-slate-400 ml-2">Athena_RAMS_Telemetry.live</span>
-                            </div>
-                            <span class="text-[11px] font-mono text-teal-400 uppercase">Status: OK</span>
+                    <div class="bg-slate-900 rounded-2xl p-6 shadow-2xl border border-slate-800 text-slate-200">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                            <span class="text-xs font-mono font-bold text-cyan-400">RDD2022 & RoadBounce Multi-Sensor Telemetry</span>
+                            <span class="text-[10px] font-mono bg-blue-950 text-blue-300 px-2 py-0.5 rounded">ONLINE</span>
                         </div>
-                        <div class="space-y-3 font-mono text-xs">
-                            <div class="flex justify-between p-2 rounded bg-slate-800/60">
-                                <span class="text-slate-400">Total Roads Monitored:</span>
-                                <span class="text-cyan-400 font-bold" id="heroTotalRoads">13,420 km</span>
+                        <div class="grid grid-cols-3 gap-3 text-center mb-4 text-xs font-mono">
+                            <div class="p-2.5 bg-slate-800/80 rounded-xl">
+                                <span class="text-[10px] text-slate-400 block">Total Images</span>
+                                <strong class="text-cyan-400 text-base" id="rddTotalImages">47,420</strong>
                             </div>
-                            <div class="flex justify-between p-2 rounded bg-slate-800/60">
-                                <span class="text-slate-400">Pothole & Defect Detection:</span>
-                                <span class="text-emerald-400 font-bold">92.4% Accuracy</span>
+                            <div class="p-2.5 bg-slate-800/80 rounded-xl">
+                                <span class="text-[10px] text-slate-400 block">India Images</span>
+                                <strong class="text-emerald-400 text-base" id="rddIndiaImages">9,665</strong>
                             </div>
-                            <div class="flex justify-between p-2 rounded bg-slate-800/60">
-                                <span class="text-slate-400">CA Clause Compliance:</span>
-                                <span class="text-teal-300 font-bold">Audit-Ready (91.8%)</span>
+                            <div class="p-2.5 bg-slate-800/80 rounded-xl">
+                                <span class="text-[10px] text-slate-400 block">YOLOv8 mAP</span>
+                                <strong class="text-amber-400 text-base">92.4%</strong>
                             </div>
-                            <div class="flex justify-between p-2 rounded bg-slate-800/60">
-                                <span class="text-slate-400">Adaptive Signal Timing:</span>
-                                <span class="text-amber-400 font-bold">15s - 60s Dynamic</span>
+                        </div>
+                        <div class="space-y-1.5 text-xs font-mono text-slate-300 bg-slate-800/50 p-3 rounded-xl">
+                            <div class="flex justify-between">
+                                <span>🟢 Green Optimal Roads:</span>
+                                <strong class="text-emerald-400" id="kpiGreenCount">--</strong>
                             </div>
-                            <div class="flex justify-between p-2 rounded bg-slate-800/60">
-                                <span class="text-slate-400">IndiaRAP Star Safety Rating:</span>
-                                <span class="text-indigo-400 font-bold">★★★★☆ (4.2/5)</span>
+                            <div class="flex justify-between">
+                                <span>🟡 Yellow Actionable Roads:</span>
+                                <strong class="text-amber-400" id="kpiYellowCount">--</strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>🔴 Red Damaged Roads (with Proofs):</span>
+                                <strong class="text-rose-400" id="kpiRedCount">--</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
-            </div>
-
-            <!-- Stats Bar (Scale & Precision in Numbers) -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-16">
-                <div class="stat-card-gradient p-5 rounded-2xl text-center">
-                    <h3 class="text-2xl sm:text-3xl font-black text-blue-600 mono" data-counter="320">320+</h3>
-                    <p class="text-xs font-semibold text-slate-500 mt-1 uppercase">Asset Categories</p>
-                </div>
-                <div class="stat-card-gradient p-5 rounded-2xl text-center">
-                    <h3 class="text-2xl sm:text-3xl font-black text-teal-600 mono" data-counter="190000">190K+</h3>
-                    <p class="text-xs font-semibold text-slate-500 mt-1 uppercase">Surveyed KM</p>
-                </div>
-                <div class="stat-card-gradient p-5 rounded-2xl text-center">
-                    <h3 class="text-2xl sm:text-3xl font-black text-indigo-600 mono" data-counter="300">300+</h3>
-                    <p class="text-xs font-semibold text-slate-500 mt-1 uppercase">Projects Delivered</p>
-                </div>
-                <div class="stat-card-gradient p-5 rounded-2xl text-center">
-                    <h3 class="text-2xl sm:text-3xl font-black text-emerald-600 mono">$45M+</h3>
-                    <p class="text-xs font-semibold text-slate-500 mt-1 uppercase">Client Cost Saved</p>
-                </div>
-                <div class="stat-card-gradient p-5 rounded-2xl text-center">
-                    <h3 class="text-2xl sm:text-3xl font-black text-purple-600 mono" data-counter="13000">13K+</h3>
-                    <p class="text-xs font-semibold text-slate-500 mt-1 uppercase">Unique Roads</p>
-                </div>
-                <div class="stat-card-gradient p-5 rounded-2xl text-center">
-                    <h3 class="text-2xl sm:text-3xl font-black text-rose-600 mono">7,500+</h3>
-                    <p class="text-xs font-semibold text-slate-500 mt-1 uppercase">KM in 45 Days</p>
-                </div>
             </div>
         </div>
     </section>
 
     <!-- ==========================================================================
-         5. ASSET & VIDEO MARQUEE GALLERIES (RoadAthena Defect Showcases)
+         RDD2022 OBJECT DETECTION STUDIO
          ========================================================================== -->
-    <section id="asset-gallery" class="py-16 bg-slate-100/70 relative overflow-hidden select-none">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 text-center">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold uppercase tracking-wider mb-3">
-                <i class="fas fa-camera"></i> Computer Vision Multi-Label Detection
-            </div>
-            <h2 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                Comprehensive <span class="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">320+ Road Asset</span> Gallery
-            </h2>
-            <p class="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mt-2">
-                Click any asset card to inspect the high-resolution survey capture or AI video telemetry detection.
-            </p>
-        </div>
-
-        <!-- Marquee Track 1: Pavement Distress & Safety Furniture -->
-        <div class="marquee-container mb-6">
-            <div class="marquee-track space-x-4 px-4" id="assetTrack1">
-                <!-- Dynamically populated via JS -->
-            </div>
-        </div>
-
-        <!-- Marquee Track 2: Markings & Urban Infrastructure -->
-        <div class="marquee-container mb-8">
-            <div class="marquee-track-reverse space-x-4 px-4" id="assetTrack2">
-                <!-- Dynamically populated via JS -->
-            </div>
-        </div>
-    </section>
-
-    <!-- ==========================================================================
-         6. DOMESTIC REACH & STATE-LEVEL SURVEY DASHBOARD
-         ========================================================================== -->
-    <section id="domestic-presence" class="py-16 bg-white relative">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
-                    <i class="fas fa-map-marker-alt"></i> Pan-India Survey Deployment
-                </div>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                    Our <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-600 bg-clip-text text-transparent">Domestic Reach</span> Across 20+ States
-                </h2>
-                <p class="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mt-2">
-                    Select any state card to inspect active surveyed kilometers, pavement health rating, and prioritized maintenance queues.
-                </p>
-            </div>
-
-            <!-- State Summary Banner -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
-                <div class="text-center border-r border-slate-800">
-                    <span class="text-slate-400 text-xs uppercase font-medium">Active States</span>
-                    <h4 class="text-2xl font-black text-cyan-400 mono mt-1" id="stateTotalCount">19 States</h4>
-                </div>
-                <div class="text-center border-r border-slate-800">
-                    <span class="text-slate-400 text-xs uppercase font-medium">Total Surveyed Route</span>
-                    <h4 class="text-2xl font-black text-emerald-400 mono mt-1" id="stateTotalKm">279,750 km</h4>
-                </div>
-                <div class="text-center border-r border-slate-800">
-                    <span class="text-slate-400 text-xs uppercase font-medium">National Health Index</span>
-                    <h4 class="text-2xl font-black text-teal-300 mono mt-1" id="stateAvgHealth">85.3 / 100</h4>
-                </div>
-                <div class="text-center">
-                    <span class="text-slate-400 text-xs uppercase font-medium">Active Maintenance Tasks</span>
-                    <h4 class="text-2xl font-black text-amber-400 mono mt-1" id="stateTotalDefects">3,142 Segments</h4>
-                </div>
-            </div>
-
-            <!-- Interactive State Cards Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3" id="stateCardsGrid">
-                <!-- Populated via API -->
-            </div>
-
-            <!-- Selected State Detail Card -->
-            <div id="selectedStateDetail" class="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl hidden">
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Regional Inspection Focus</span>
-                        <h3 class="text-2xl font-black text-slate-900 mt-1" id="selectedStateName">Punjab</h3>
-                    </div>
-                    <div class="flex flex-wrap gap-4 text-sm">
-                        <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-100">
-                            <span class="text-slate-500 text-xs block">Surveyed Length</span>
-                            <strong class="text-slate-900 font-bold" id="selectedStateKm">14,800 km</strong>
-                        </div>
-                        <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-100">
-                            <span class="text-slate-500 text-xs block">Health Index</span>
-                            <strong class="text-emerald-600 font-bold" id="selectedStateHealth">88.6 / 100</strong>
-                        </div>
-                        <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-100">
-                            <span class="text-slate-500 text-xs block">Audit Status</span>
-                            <strong class="text-blue-700 font-bold" id="selectedStateStatus">Compliant</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==========================================================================
-         7. ADVANCED CAPABILITIES 6-GRID SECTION
-         ========================================================================== -->
-    <section id="capabilities" class="py-16 bg-slate-50 relative">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold uppercase tracking-wider mb-3">
-                    <i class="fas fa-layer-group"></i> Architectural Pillars
-                </div>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                    Advanced Capabilities for <span class="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">Smart Infrastructure</span>
-                </h2>
-                <p class="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mt-2">
-                    Unlock the full potential of your road network with AI-driven analytics, computer vision, and compliance automation.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- 1. Proven Excellence -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center text-xl mb-4">
-                        <i class="fas fa-award"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Proven Excellence</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Consistently delivering large-scale road inspection projects across national highways with 92.4%+ verifiable detection accuracy.
-                    </p>
-                </div>
-
-                <!-- 2. Rapid Customization -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-4">
-                        <i class="fas fa-sliders-h"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Rapid Customization</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Adaptive models configurable for local state specifications, urban municipal zones, and high-altitude mountain corridors.
-                    </p>
-                </div>
-
-                <!-- 3. Trusted Worldwide -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl mb-4">
-                        <i class="fas fa-globe-asia"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Trusted Worldwide</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        High satisfaction and measurable cost reductions of over $45M+ across major highway concessions and road authorities.
-                    </p>
-                </div>
-
-                <!-- 4. Comprehensive Coverage -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center text-xl mb-4">
-                        <i class="fas fa-map-marked-alt"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Comprehensive Coverage</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Full-spectrum asset digitization across rural roads, expressways, ring roads, and arterial city networks with 13,000+ unique roads.
-                    </p>
-                </div>
-
-                <!-- 5. Rich Datasets -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4">
-                        <i class="fas fa-database"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Rich Native Datasets</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Trained on hundreds of thousands of Indian road kilometers featuring diverse distress types, monsoon wear, and traffic wear.
-                    </p>
-                </div>
-
-                <!-- 6. Multi-Source Data -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl mb-4">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Multi-Source Feeds</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
-                        Seamlessly ingests and synchronizes feeds from dashcams, Road Survey Vehicles (RSV), aerial drones, and CCTV cameras.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==========================================================================
-         8. PERFORMANCE INSIGHTS & IRC COMPLIANCE TABBED STAGE
-         ========================================================================== -->
-    <section id="compliance-insights" class="py-16 bg-white relative">
+    <section id="rdd-studio" class="py-14 bg-slate-900 text-white relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-10">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-3">
-                    <i class="fas fa-chart-line"></i> Regulatory & Audit Analytics
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/60 border border-blue-700 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-2">
+                    <i class="fas fa-crosshairs"></i> Deep Learning Object Detection (CRDDC 2022)
                 </div>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                    Performance <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Insights & IRC Compliance</span>
+                <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    RDD2022 Road Damage Object Detection Studio
                 </h2>
-                <p class="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mt-2">
-                    Automate Concession Agreement (CA) safety clause audits and eliminate penalty risks from Independent Engineers (IE).
+                <p class="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto mt-1">
+                    Automatic multi-label bounding box localization for Longitudinal (D00), Transverse (D10), Alligator (D20), and Pothole (D40) distress types.
                 </p>
             </div>
 
-            <!-- Tab Buttons -->
-            <div class="flex flex-wrap justify-center gap-2 mb-8">
-                <button onclick="switchAthenaTab('speedTab', this)" class="tab-btn active px-4 py-2.5 rounded-xl font-bold text-sm bg-blue-600 text-white shadow-md shadow-blue-500/20 transition-all flex items-center gap-2">
-                    <i class="fas fa-bolt"></i> Speed & Accuracy
-                </button>
-                <button onclick="switchAthenaTab('complianceTab', this)" class="tab-btn px-4 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-2">
-                    <i class="fas fa-check-double"></i> IRC Compliance Tester
-                </button>
-                <button onclick="switchAthenaTab('costTab', this)" class="tab-btn px-4 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-2">
-                    <i class="fas fa-hand-holding-usd"></i> Cost Efficiency
-                </button>
-                <button onclick="switchAthenaTab('safetyTab', this)" class="tab-btn px-4 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-2">
-                    <i class="fas fa-shield-virus"></i> Safety Assurance
-                </button>
-            </div>
-
-            <!-- Tab Stage -->
-            <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6 lg:p-8 shadow-sm">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                <!-- Tab 1: Speed & Accuracy -->
-                <div id="speedTab" class="tab-pane active-pane flex-col lg:flex-row gap-8 items-center">
-                    <div class="w-full lg:w-1/2">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-xs font-bold uppercase mb-3">Instant Telemetry</div>
-                        <h3 class="text-2xl font-black text-slate-900 mb-3">Real-Time Geo-Tagged Defect Classification</h3>
-                        <p class="text-slate-600 text-sm leading-relaxed mb-4">
-                            Instantly capture, categorize, and prioritize pavement distress points with sub-meter coordinate precision and millimeter depth accuracy.
-                        </p>
-                        <div class="space-y-3">
-                            <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-xs border border-slate-200/60">
-                                <i class="fas fa-check-circle text-blue-600 text-lg"></i>
-                                <span class="text-sm font-semibold text-slate-800">Automated Error Elimination via AI Cross-Verification</span>
-                            </div>
-                            <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-xs border border-slate-200/60">
-                                <i class="fas fa-check-circle text-blue-600 text-lg"></i>
-                                <span class="text-sm font-semibold text-slate-800">45-Day High-Speed Turnaround for 7,500+ km Networks</span>
-                            </div>
-                            <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-xs border border-slate-200/60">
-                                <i class="fas fa-check-circle text-blue-600 text-lg"></i>
-                                <span class="text-sm font-semibold text-slate-800">Remote Verification via Cloud Video Playback & GIS</span>
-                            </div>
-                        </div>
+                <!-- Left: Interactive Canvas & Image Viewer -->
+                <div class="lg:col-span-7 bg-slate-950 p-5 rounded-3xl border border-slate-800 shadow-2xl">
+                    <div class="flex items-center justify-between mb-3 text-xs font-mono">
+                        <span class="text-slate-400"><i class="fas fa-video mr-1 text-red-500"></i> AI Vision Feed</span>
+                        <span id="rddInferenceTime" class="text-teal-400">Inference: 14.8 ms (68 FPS)</span>
                     </div>
-                    <div class="w-full lg:w-1/2 bg-slate-900 text-slate-200 p-6 rounded-2xl shadow-xl font-mono text-xs">
-                        <div class="text-teal-400 font-bold mb-3">// Sample AI Inference Output</div>
-                        <div class="space-y-2 text-slate-300">
-                            <div>{ "timestamp": "2026-08-21T16:40:00Z",</div>
-                            <div class="pl-4">"asset_class": "Pothole_Major",</div>
-                            <div class="pl-4">"coordinates": [28.6139, 77.2090],</div>
-                            <div class="pl-4">"depth_est_mm": 38.4,</div>
-                            <div class="pl-4">"irc_compliance": "NON_COMPLIANT_IRC_SP_84",</div>
-                            <div class="pl-4">"action_required": "48HR_PATCHING_DISPATCH",</div>
-                            <div class="pl-4">"severity_level": "RED_ALERT"</div>
-                            <div>}</div>
-                        </div>
+
+                    <!-- Image Display with Bounding Boxes -->
+                    <div class="relative w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-slate-800" id="rddCanvasContainer">
+                        <img id="rddInferenceImage" src="/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" class="w-full h-full object-cover select-none" alt="Road Defect">
+                        <div id="rddBboxOverlay" class="absolute inset-0 pointer-events-none"></div>
+                    </div>
+
+                    <!-- Preset Sample Selector -->
+                    <div class="flex items-center gap-2 mt-4 overflow-x-auto pb-2 text-xs select-none">
+                        <span class="font-bold text-slate-400 shrink-0">Samples:</span>
+                        <button onclick="runRddDetectionOnSample('/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 shrink-0">Pothole Cluster (D40)</button>
+                        <button onclick="runRddDetectionOnSample('/static/assets/damaged_roads/alligator-cracks-1_jpg.rf.4d9f0f9bcf0bb53ffb4a6fa8087f9754.jpg')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 shrink-0">Alligator Fatigue (D20)</button>
+                        <button onclick="runRddDetectionOnSample('/static/assets/damaged_roads/crack1.jpg')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 shrink-0">Longitudinal Crack (D00)</button>
+                        <button onclick="runRddDetectionOnSample('/static/assets/damaged_roads/speed-hump-ahead-yellow-stripes-260nw-780891661_jpeg_jpg.rf.13e6f34dcce59001a205cc149d73af2f.jpg')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 shrink-0">Marking Blur (D43)</button>
                     </div>
                 </div>
 
-                <!-- Tab 2: IRC Compliance Tester (Interactive API) -->
-                <div id="complianceTab" class="tab-pane hidden-pane flex-col gap-6">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-                        <div>
-                            <h3 class="text-2xl font-black text-slate-900">Interactive IRC Safety & CA Clause Validator</h3>
-                            <p class="text-slate-600 text-sm mt-1">Adjust parameters below to test automatic Indian Road Congress audit compliance.</p>
+                <!-- Right: Detected Objects & Taxonomy -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="bg-slate-800/80 p-5 rounded-3xl border border-slate-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                                <i class="fas fa-list-check text-cyan-400"></i> Localized Distress Instances
+                            </h4>
+                            <span id="rddObjectCountBadge" class="px-2 py-0.5 rounded bg-blue-900 text-cyan-300 font-mono text-[10px] font-bold">2 FOUND</span>
                         </div>
-                        <button onclick="runIrcComplianceCheck()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
-                            <i class="fas fa-sync-alt mr-1"></i> Recalculate Compliance
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Pothole Slider -->
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                            <label class="text-xs font-bold text-slate-700 block mb-1">Pothole Depth (mm) [Max: 25mm]</label>
-                            <input type="range" id="ircPotholeInput" min="5" max="60" value="18" class="w-full" oninput="document.getElementById('ircPotholeVal').innerText = this.value + ' mm'">
-                            <span id="ircPotholeVal" class="text-xs font-mono font-bold text-blue-600">18 mm</span>
-                        </div>
-
-                        <!-- Crack Slider -->
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                            <label class="text-xs font-bold text-slate-700 block mb-1">Crack Width (mm) [Max: 3.0mm]</label>
-                            <input type="range" id="ircCrackInput" min="0.5" max="10.0" step="0.1" value="2.2" class="w-full" oninput="document.getElementById('ircCrackVal').innerText = this.value + ' mm'">
-                            <span id="ircCrackVal" class="text-xs font-mono font-bold text-blue-600">2.2 mm</span>
-                        </div>
-
-                        <!-- Marking Retro Slider -->
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                            <label class="text-xs font-bold text-slate-700 block mb-1">Marking Retro-Reflectivity [Min: 150]</label>
-                            <input type="range" id="ircRetroInput" min="50" max="300" value="180" class="w-full" oninput="document.getElementById('ircRetroVal').innerText = this.value + ' mcd'">
-                            <span id="ircRetroVal" class="text-xs font-mono font-bold text-blue-600">180 mcd</span>
+                        <div id="rddDetectionsList" class="space-y-2 max-h-64 overflow-y-auto pr-1 text-xs">
+                            <!-- Populated dynamically via JS -->
                         </div>
                     </div>
 
-                    <!-- Evaluation Results -->
-                    <div id="ircResultsBox" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="font-bold text-slate-900 text-lg">Audit Verdict</h4>
-                            <span id="ircAuditScore" class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-mono font-bold text-xs">100% COMPLIANT</span>
-                        </div>
-                        <div id="ircEvaluationsList" class="space-y-2 text-sm">
-                            <!-- Populated via JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab 3: Cost Efficiency -->
-                <div id="costTab" class="tab-pane hidden-pane flex-col lg:flex-row gap-8 items-center">
-                    <div class="w-full lg:w-1/2">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-100 text-teal-700 text-xs font-bold uppercase mb-3">Economic Impact</div>
-                        <h3 class="text-2xl font-black text-slate-900 mb-3">Extending Pavement Lifecycles by 3–5 Years</h3>
-                        <p class="text-slate-600 text-sm leading-relaxed mb-4">
-                            By shifting from reactive patchwork to AI-forecasted preventative treatments, highway concessionaires save up to 40% in long-term overlay expenditures.
-                        </p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="p-4 bg-white rounded-xl border border-slate-200">
-                                <h5 class="text-2xl font-black text-teal-600 mono">35%</h5>
-                                <p class="text-xs text-slate-500 font-semibold mt-1">Reduced Emergency Patching</p>
+                    <!-- Dataset Country Distribution -->
+                    <div class="bg-slate-800/80 p-5 rounded-3xl border border-slate-700">
+                        <h4 class="font-bold text-sm text-white mb-3 flex items-center gap-2">
+                            <i class="fas fa-globe text-emerald-400"></i> Multi-National RDD2022 Splits
+                        </h4>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                            <div class="p-2 bg-slate-900 rounded-xl">
+                                <span class="text-slate-400 block text-[9px]">🇮🇳 India</span>
+                                <strong class="text-emerald-400">9,665</strong>
                             </div>
-                            <div class="p-4 bg-white rounded-xl border border-slate-200">
-                                <h5 class="text-2xl font-black text-blue-600 mono">Zero</h5>
-                                <p class="text-xs text-slate-500 font-semibold mt-1">CA Clause Non-Compliance Fines</p>
+                            <div class="p-2 bg-slate-900 rounded-xl">
+                                <span class="text-slate-400 block text-[9px]">🇯🇵 Japan</span>
+                                <strong class="text-cyan-400">13,133</strong>
                             </div>
-                        </div>
-                    </div>
-                    <div class="w-full lg:w-1/2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-                        <h4 class="font-bold text-slate-900 mb-3">Predictive Lifecycle Curve</h4>
-                        <div class="space-y-4 text-xs">
-                            <div>
-                                <div class="flex justify-between font-bold mb-1">
-                                    <span>Year 1–3: Minor Surface Sealing</span>
-                                    <span class="text-emerald-600">Cost: $5k / km</span>
-                                </div>
-                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                    <div class="bg-emerald-500 h-full w-[25%]"></div>
-                                </div>
+                            <div class="p-2 bg-slate-900 rounded-xl">
+                                <span class="text-slate-400 block text-[9px]">🇳🇴 Norway</span>
+                                <strong class="text-purple-400">10,201</strong>
                             </div>
-                            <div>
-                                <div class="flex justify-between font-bold mb-1">
-                                    <span>Year 4–6: Slurry Seal & Markings</span>
-                                    <span class="text-blue-600">Cost: $12k / km</span>
-                                </div>
-                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                    <div class="bg-blue-500 h-full w-[45%]"></div>
-                                </div>
+                            <div class="p-2 bg-slate-900 rounded-xl">
+                                <span class="text-slate-400 block text-[9px]">🇺🇸 USA</span>
+                                <strong class="text-blue-400">6,005</strong>
                             </div>
-                            <div>
-                                <div class="flex justify-between font-bold mb-1">
-                                    <span>Reactive Emergency Overlays (Without AI)</span>
-                                    <span class="text-rose-600">Cost: $85k / km</span>
-                                </div>
-                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                    <div class="bg-rose-500 h-full w-[95%]"></div>
-                                </div>
+                            <div class="p-2 bg-slate-900 rounded-xl">
+                                <span class="text-slate-400 block text-[9px]">🇨🇿 Czech</span>
+                                <strong class="text-amber-400">3,538</strong>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab 4: Safety Assurance -->
-                <div id="safetyTab" class="tab-pane hidden-pane flex-col lg:flex-row gap-8 items-center">
-                    <div class="w-full lg:w-1/2">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-100 text-rose-700 text-xs font-bold uppercase mb-3">Public Safety</div>
-                        <h3 class="text-2xl font-black text-slate-900 mb-3">Zero High-Risk Road Collisions</h3>
-                        <p class="text-slate-600 text-sm leading-relaxed mb-4">
-                            RoadSense AI maps blind spots, damaged crash barriers, faded zebra crossings, and sudden edge drop-offs to proactively protect motorists and pedestrians.
-                        </p>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex items-center gap-2 text-slate-700">
-                                <i class="fas fa-check text-emerald-500"></i> IndiaRAP Star Safety Rating Automation
+                            <div class="p-2 bg-slate-900 rounded-xl">
+                                <span class="text-slate-400 block text-[9px]">🇨🇳 China</span>
+                                <strong class="text-rose-400">4,878</strong>
                             </div>
-                            <div class="flex items-center gap-2 text-slate-700">
-                                <i class="fas fa-check text-emerald-500"></i> Missing Sign & Encroachment Detection
-                            </div>
-                            <div class="flex items-center gap-2 text-slate-700">
-                                <i class="fas fa-check text-emerald-500"></i> Night Visibility & Luminescence Audits
-                            </div>
-                        </div>
-                    </div>
-                    <div class="w-full lg:w-1/2 bg-slate-900 text-white p-6 rounded-2xl">
-                        <h4 class="font-bold text-amber-400 mb-2"><i class="fas fa-exclamation-circle mr-2"></i> Safety Furniture Deficiency Alerts</h4>
-                        <div class="space-y-2 text-xs font-mono text-slate-300">
-                            <div class="p-2 bg-slate-800 rounded">⚠ NH-48 Km 142: W-Beam Barrier Deflection > 0.8m</div>
-                            <div class="p-2 bg-slate-800 rounded">⚠ Ring Road Junction 4: Faded Pedestrian Crossing (&lt;100 mcd)</div>
-                            <div class="p-2 bg-slate-800 rounded">⚠ Express Link: Damaged Solar Blinker Unit</div>
                         </div>
                     </div>
                 </div>
@@ -659,442 +315,478 @@
     </section>
 
     <!-- ==========================================================================
-         9. UNIFIED ROADSENSE AI OPERATIONS DECK (Map, Controls, Traffic, Reroute, Voice)
+         ALL-INDIA ROAD CONDITION MONITORING & REMEDIATION DECK
          ========================================================================== -->
-    <section id="operations-deck" class="py-16 bg-slate-100 relative">
+    <section id="all-india-monitoring" class="py-14 bg-white relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-10">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
-                    <i class="fas fa-desktop"></i> Live Command & Telemetry
+            
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
+                        <i class="fas fa-map-marked-alt"></i> Pan-India Road Condition Telemetry
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                        Real-Time Road Network Condition & Proof Explorer
+                    </h2>
+                    <p class="text-slate-600 text-xs sm:text-sm mt-1">
+                        All road segments backed by SQLite database. Click <strong>"Improve to Green"</strong> to trigger preventative maintenance and update live road health!
+                    </p>
                 </div>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                    RoadSense <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Operations Console</span>
-                </h2>
-                <p class="text-slate-600 text-sm md:text-base max-w-2xl mx-auto mt-2">
-                    Execute adaptive traffic light timing, compute hazard-avoidance navigation routes, submit field voice dispatches, and monitor road surface materials.
-                </p>
+
+                <!-- Condition Filter Tabs -->
+                <div class="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <button onclick="filterByStatus('ALL', this)" class="status-tab-btn px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-900 text-white shadow-sm transition-all">
+                        All (<span id="countAll">0</span>)
+                    </button>
+                    <button onclick="filterByStatus('GREEN', this)" class="status-tab-btn px-3 py-1.5 rounded-xl font-bold text-xs bg-white text-emerald-700 border border-slate-200 hover:bg-emerald-50 transition-all flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Green Optimal (<span id="countGreen">0</span>)
+                    </button>
+                    <button onclick="filterByStatus('YELLOW', this)" class="status-tab-btn px-3 py-1.5 rounded-xl font-bold text-xs bg-white text-amber-700 border border-slate-200 hover:bg-amber-50 transition-all flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Yellow Improvable (<span id="countYellow">0</span>)
+                    </button>
+                    <button onclick="filterByStatus('RED', this)" class="status-tab-btn px-3 py-1.5 rounded-xl font-bold text-xs bg-white text-rose-700 border border-slate-200 hover:bg-rose-50 transition-all flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-500"></span> Red Damaged (<span id="countRed">0</span>)
+                    </button>
+                </div>
             </div>
 
-            <!-- Operations Sub-Modules Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                
-                <!-- 1. Adaptive Traffic Signal Controller -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fas fa-traffic-light text-amber-500"></i> Adaptive Traffic Signals
-                        </h3>
-                        <span class="text-[10px] uppercase font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Real-Time</span>
-                    </div>
-                    <p class="text-xs text-slate-600 mb-3">Calculates optimal green-light timing (15s–60s) based on live vehicle density.</p>
-                    <div class="space-y-2 mb-4 text-xs font-mono">
-                        <div class="flex justify-between bg-slate-50 p-2 rounded">
-                            <span>Target City:</span>
-                            <strong id="trafficCity">New Delhi</strong>
-                        </div>
-                        <div class="flex justify-between bg-slate-50 p-2 rounded">
-                            <span>Computed Green Timing:</span>
-                            <strong id="trafficTiming" class="text-emerald-600">45 seconds</strong>
-                        </div>
-                    </div>
-                    <button onclick="fetchAdaptiveTrafficSignals()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all">
-                        Optimize Traffic Signals <i class="fas fa-sync ml-1"></i>
-                    </button>
-                </div>
-
-                <!-- 2. Hazard Rerouting Navigation -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fas fa-directions text-blue-600"></i> Route Rerouting Engine
-                        </h3>
-                        <span class="text-[10px] uppercase font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">AI Path</span>
-                    </div>
-                    <p class="text-xs text-slate-600 mb-3">Dynamically steers transit around high-risk potholes and flooded road sections.</p>
-                    <div class="space-y-2 mb-4 text-xs font-mono">
-                        <div class="flex justify-between bg-slate-50 p-2 rounded">
-                            <span>Origin → Dest:</span>
-                            <span>CP → Airport T3</span>
-                        </div>
-                        <div class="flex justify-between bg-slate-50 p-2 rounded">
-                            <span>Bypassed Red Hazards:</span>
-                            <strong id="rerouteHazards" class="text-rose-600">2 Critical Potholes</strong>
-                        </div>
-                    </div>
-                    <button onclick="calculateHazardReroute()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all">
-                        Compute Safe Route <i class="fas fa-route ml-1"></i>
-                    </button>
-                </div>
-
-                <!-- 3. Field Voice Dispatch (LiveSpeak) -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fas fa-microphone-alt text-indigo-600"></i> Field Voice Dispatch
-                        </h3>
-                        <span class="text-[10px] uppercase font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">NLP Analyzed</span>
-                    </div>
-                    <p class="text-xs text-slate-600 mb-2">Dictate road repair reports with instant urgency classification.</p>
-                    <input type="text" id="voiceTextInput" placeholder="e.g. Critical crack near junction" class="w-full p-2 border border-slate-200 rounded-lg text-xs mb-3">
-                    <button onclick="submitVoiceDispatch()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all">
-                        Dispatch Voice Report <i class="fas fa-paper-plane ml-1"></i>
-                    </button>
-                    <span id="voiceDispatchStatus" class="text-[11px] font-mono text-emerald-600 block mt-2"></span>
-                </div>
-
+            <!-- City Filter Pills -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-6 text-xs select-none">
+                <span class="font-bold text-slate-500 shrink-0"><i class="fas fa-city mr-1"></i> Cities:</span>
+                <button onclick="filterByCity('ALL', this)" class="city-pill active px-3 py-1.5 rounded-full bg-blue-600 text-white font-bold shrink-0 transition-all">All India</button>
+                <button onclick="filterByCity('New Delhi', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">New Delhi</button>
+                <button onclick="filterByCity('Mumbai', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Mumbai</button>
+                <button onclick="filterByCity('Bengaluru', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Bengaluru</button>
+                <button onclick="filterByCity('Pune', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Pune</button>
+                <button onclick="filterByCity('Hyderabad', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Hyderabad</button>
+                <button onclick="filterByCity('Chennai', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Chennai</button>
+                <button onclick="filterByCity('Kolkata', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Kolkata</button>
+                <button onclick="filterByCity('Ahmedabad', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Ahmedabad</button>
+                <button onclick="filterByCity('Jaipur', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Jaipur</button>
+                <button onclick="filterByCity('Lucknow', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Lucknow</button>
+                <button onclick="filterByCity('Patna', this)" class="city-pill px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold shrink-0 transition-all">Patna</button>
             </div>
 
-            <!-- GIS Map & Filter Deck Container -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                <!-- Left Sidebar Filters -->
-                <div class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 class="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
-                        <i class="fas fa-filter text-blue-600"></i> Geographic & Material Filters
-                    </h3>
-                    
-                    <div class="space-y-4 text-xs">
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Target Indian City / Territory:</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="cityStateInput" value="New Delhi, India" class="w-full p-2 border border-slate-200 rounded-lg" onkeypress="handleSearchKey(event)">
-                                <button onclick="searchMap()" class="px-3 bg-blue-600 text-white rounded-lg"><i class="fas fa-search"></i></button>
-                            </div>
-                        </div>
+            <!-- Dynamic Road Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="roadCardsGrid"></div>
 
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Pavement Surface Material:</label>
-                            <select id="materialFilter" class="w-full p-2 border border-slate-200 rounded-lg font-medium" onchange="applyFiltersAndRender()">
-                                <option value="ALL">All Materials (Asphalt, Concrete, PCC)</option>
-                                <option value="Asphalt">Flexible Bituminous Asphalt</option>
-                                <option value="Concrete">Reinforced Cement Concrete</option>
-                                <option value="PCC">Portland Cement Concrete (PCC)</option>
-                            </select>
-                        </div>
+        </div>
+    </section>
 
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Condition Zone Filter:</label>
-                            <select id="zoneFilter" class="w-full p-2 border border-slate-200 rounded-lg font-medium" onchange="applyFiltersAndRender()">
-                                <option value="ALL">Show All Zones</option>
-                                <option value="RED">Red Zone (Critical Maintenance)</option>
-                                <option value="YELLOW">Yellow Zone (Deterioration Risk)</option>
-                                <option value="GREEN">Green Zone (Good Condition)</option>
-                            </select>
-                        </div>
+    <!-- ASSET MARQUEE -->
+    <section id="asset-gallery" class="py-14 bg-slate-100/80 relative overflow-hidden select-none">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 text-center">
+            <h2 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">320+ Road Asset Category & Defect Gallery</h2>
+        </div>
+        <div class="marquee-container mb-4"><div class="marquee-track space-x-4 px-4" id="assetTrack1"></div></div>
+        <div class="marquee-container"><div class="marquee-track-reverse space-x-4 px-4" id="assetTrack2"></div></div>
+    </section>
 
-                        <div>
-                            <label class="font-bold text-slate-700 block mb-1">Minimum Traffic Factor (0 - 1.0):</label>
-                            <input type="range" id="minTrafficLoad" min="0" max="1" step="0.05" value="0" class="w-full" oninput="document.getElementById('trafficValLabel').innerText = this.value; applyFiltersAndRender()">
-                            <div class="flex justify-between text-[10px] text-slate-500">
-                                <span>0 (Low)</span>
-                                <span id="trafficValLabel" class="font-bold text-blue-600">0</span>
-                                <span>1.0 (High)</span>
-                            </div>
-                        </div>
+    <!-- COMPLIANCE TESTER -->
+    <section id="compliance-insights" class="py-14 bg-slate-50 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Indian Road Congress (IRC) Safety & CA Clause Validator</h2>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 lg:p-8 shadow-sm">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="text-xs font-bold text-slate-700 block mb-1">Pothole Depth (mm) [Limit: 25mm]</label>
+                        <input type="range" id="ircPotholeInput" min="5" max="60" value="18" class="w-full" oninput="document.getElementById('ircPotholeVal').innerText = this.value + ' mm'; runIrcComplianceCheck()">
+                        <span id="ircPotholeVal" class="text-xs font-mono font-bold text-blue-600">18 mm</span>
                     </div>
-
-                    <hr class="my-5 border-slate-100">
-
-                    <!-- Live KPI Counters -->
-                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div class="p-2 bg-red-50 text-red-700 rounded-xl border border-red-100">
-                            <span class="text-[10px] uppercase font-bold block">Red</span>
-                            <strong id="stat-red" class="text-lg">0</strong>
-                        </div>
-                        <div class="p-2 bg-amber-50 text-amber-700 rounded-xl border border-amber-100">
-                            <span class="text-[10px] uppercase font-bold block">Yellow</span>
-                            <strong id="stat-yellow" class="text-lg">0</strong>
-                        </div>
-                        <div class="p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100">
-                            <span class="text-[10px] uppercase font-bold block">Green</span>
-                            <strong id="stat-green" class="text-lg">0</strong>
-                        </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="text-xs font-bold text-slate-700 block mb-1">Crack Width (mm) [Limit: 3.0mm]</label>
+                        <input type="range" id="ircCrackInput" min="0.5" max="10.0" step="0.1" value="2.2" class="w-full" oninput="document.getElementById('ircCrackVal').innerText = this.value + ' mm'; runIrcComplianceCheck()">
+                        <span id="ircCrackVal" class="text-xs font-mono font-bold text-blue-600">2.2 mm</span>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <label class="text-xs font-bold text-slate-700 block mb-1">Marking Retro-Reflectivity [Min: 150]</label>
+                        <input type="range" id="ircRetroInput" min="50" max="300" value="180" class="w-full" oninput="document.getElementById('ircRetroVal').innerText = this.value + ' mcd'; runIrcComplianceCheck()">
+                        <span id="ircRetroVal" class="text-xs font-mono font-bold text-blue-600">180 mcd</span>
                     </div>
                 </div>
-
-                <!-- Right Map Visualization -->
-                <div class="lg:col-span-8 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative">
-                    <div id="map" class="w-full h-[520px] rounded-xl overflow-hidden bg-slate-100">
-                        <div id="loadingOverlay" class="absolute inset-0 bg-white/90 flex flex-col items-center justify-center text-blue-600">
-                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
-                            <span class="font-bold text-sm">Streaming Road Coordinates...</span>
-                        </div>
+                <div id="ircResultsBox" class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold text-slate-900 text-sm">Automated Compliance Result</h4>
+                        <span id="ircAuditScore" class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-mono font-bold text-xs">100% AUDIT_READY</span>
                     </div>
+                    <div id="ircEvaluationsList" class="space-y-2 text-xs"></div>
                 </div>
-
             </div>
         </div>
     </section>
 
-    <!-- ==========================================================================
-         10. ASSET INSPECTION MODAL (Fullscreen Media Preview)
-         ========================================================================== -->
-    <div id="assetModal" class="fixed inset-0 z-[99999] bg-black/90 hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="relative bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-3xl p-6 shadow-2xl text-white">
-            <button onclick="closeAssetModal()" class="absolute -top-3 -right-3 w-9 h-9 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-all font-bold">
-                ✕
+    <!-- OPERATIONS CONSOLE -->
+    <section id="operations-deck" class="py-14 bg-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Unified Operations & Command Console</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <h3 class="font-bold text-slate-900 text-sm mb-2"><i class="fas fa-traffic-light text-amber-500 mr-2"></i>Adaptive Traffic Signals</h3>
+                    <button onclick="fetchAdaptiveTrafficSignals()" class="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold">Optimize Delhi Signals</button>
+                    <span id="trafficOutput" class="text-xs font-mono text-emerald-600 block mt-2"></span>
+                </div>
+                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <h3 class="font-bold text-slate-900 text-sm mb-2"><i class="fas fa-route text-blue-600 mr-2"></i>Hazard Reroute Engine</h3>
+                    <button onclick="calculateHazardReroute()" class="w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Compute Safe Path</button>
+                    <span id="rerouteOutput" class="text-xs font-mono text-blue-600 block mt-2"></span>
+                </div>
+                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <h3 class="font-bold text-slate-900 text-sm mb-2"><i class="fas fa-microphone text-indigo-600 mr-2"></i>Voice Dispatch</h3>
+                    <input type="text" id="voiceTextInput" placeholder="e.g. Critical pothole on Ring Road" class="w-full p-2 border border-slate-200 rounded-lg text-xs mb-2">
+                    <button onclick="submitVoiceDispatch()" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Send Voice Dispatch</button>
+                    <span id="voiceDispatchStatus" class="text-xs font-mono text-emerald-600 block mt-2"></span>
+                </div>
+            </div>
+            <div id="map" class="w-full h-[400px] rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden"></div>
+        </div>
+    </section>
+
+    <!-- PROOF MODAL -->
+    <div id="proofModal" class="fixed inset-0 z-[99999] bg-black/85 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="relative bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl p-6 shadow-2xl text-white">
+            <button onclick="closeProofModal()" class="absolute -top-3 -right-3 w-9 h-9 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700 font-bold">✕</button>
+            <div class="flex items-center gap-2 mb-2">
+                <span id="proofModalBadge" class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase mono">RED ALERT</span>
+                <span id="proofModalRoadId" class="text-xs font-mono text-slate-400">RB-DEL-03</span>
+            </div>
+            <h3 id="proofModalRoadName" class="text-xl font-bold text-white mb-4">NH-48 Mahipalpur Junction Underpass</h3>
+
+            <div class="w-full h-56 bg-slate-950 rounded-2xl overflow-hidden mb-4 relative flex items-center justify-center border border-slate-800">
+                <img id="proofModalImage" src="" class="w-full h-full object-cover" alt="Damage Proof Photo">
+                <div class="absolute bottom-2 left-2 bg-black/70 px-2.5 py-1 rounded text-[10px] font-mono text-teal-300">
+                    <i class="fas fa-camera mr-1"></i> PotholeGuard Photo Proof
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 text-xs mono mb-4">
+                <div class="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span class="text-slate-400 block text-[10px]">Roughness (IRI):</span>
+                    <strong class="text-cyan-400 text-base" id="proofModalIri">6.8 m/km</strong>
+                </div>
+                <div class="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span class="text-slate-400 block text-[10px]">Vibration Peak:</span>
+                    <strong class="text-amber-400 text-base" id="proofModalGforce">4.10 G</strong>
+                </div>
+                <div class="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span class="text-slate-400 block text-[10px]">Potholes:</span>
+                    <strong class="text-rose-400 text-base" id="proofModalPotholes">12</strong>
+                </div>
+            </div>
+
+            <div class="p-3 bg-slate-800/60 rounded-xl text-xs mb-5">
+                <span class="font-bold text-slate-400 block text-[10px] uppercase">Prescribed Remedy:</span>
+                <p id="proofModalAction" class="text-slate-200 mt-0.5"></p>
+                <div class="mt-2 text-emerald-400 font-mono font-bold" id="proofModalCost"></div>
+            </div>
+
+            <button id="proofRemediateBtn" onclick="executeRemediationFromModal()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white text-xs font-bold rounded-xl shadow-lg">
+                <i class="fas fa-wrench mr-1"></i> Execute Remediation & Convert to GREEN
             </button>
-            <h3 id="modalAssetTitle" class="text-xl font-bold text-center mb-4 text-cyan-400"></h3>
-            <div class="flex items-center justify-center max-h-[65vh] overflow-hidden rounded-xl bg-slate-950">
-                <img id="modalAssetImage" src="" class="max-h-[65vh] w-auto object-contain hidden" alt="Asset Preview">
-                <video id="modalAssetVideo" controls autoplay muted class="max-h-[65vh] w-auto object-contain hidden">
-                    <source id="modalAssetVideoSource" src="" type="video/mp4">
-                </video>
-            </div>
-            <p class="text-xs text-slate-400 text-center mt-3">RoadSense Athena Computer Vision Inspection Archive</p>
         </div>
     </div>
 
-    <!-- ==========================================================================
-         11. FLOATING IRC AI ASSISTANT CHATBOT WIDGET
-         ========================================================================== -->
+    <!-- CHATBOT -->
     <div id="athenaChatWidget">
-        <!-- Floating Launcher Icon -->
-        <button onclick="toggleChatbot()" class="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-teal-500 text-white text-2xl shadow-xl shadow-blue-600/40 flex items-center justify-center hover:scale-105 transition-all">
+        <button onclick="toggleChatbot()" class="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-teal-500 text-white text-2xl shadow-xl flex items-center justify-center hover:scale-105 transition-all">
             <i class="fas fa-comment-dots"></i>
         </button>
-
-        <!-- Chat Window -->
         <div id="chatbotWindow" class="chatbot-window hidden absolute bottom-16 right-0">
-            <!-- Header -->
             <div class="p-4 bg-gradient-to-r from-blue-700 to-indigo-700 text-white flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <i class="fas fa-robot text-teal-300"></i>
-                    <div>
-                        <h4 class="font-bold text-sm leading-none">AthenaBot AI</h4>
-                        <span class="text-[10px] text-teal-200">IRC Standards & RAMS Assistant</span>
-                    </div>
-                </div>
-                <button onclick="toggleChatbot()" class="text-white hover:text-slate-200"><i class="fas fa-times"></i></button>
+                <h4 class="font-bold text-sm">AthenaBot AI</h4>
+                <button onclick="toggleChatbot()" class="text-white"><i class="fas fa-times"></i></button>
             </div>
-
-            <!-- Messages Area -->
             <div id="chatMessages" class="chatbot-messages">
-                <div class="chat-bubble-bot">
-                    Hello! I am AthenaBot, your RoadSense intelligent road engineering assistant. Ask me anything about Indian Road Congress (IRC) standards, pothole limits, or 320+ RAMS asset tracking!
-                </div>
+                <div class="chat-bubble-bot">Hello! I am AthenaBot. Ask me about RDD2022 damage detection, road condition monitoring, or IRC standards!</div>
             </div>
-
-            <!-- Suggested Topics -->
-            <div class="p-2 bg-white border-t border-slate-100 flex gap-2 overflow-x-auto">
-                <button onclick="sendQuickQuery('What is IRC standard for pothole repair?')" class="suggestion-pill">Pothole Standard</button>
-                <button onclick="sendQuickQuery('How does RoadAthena classify cracks?')" class="suggestion-pill">Crack Classification</button>
-                <button onclick="sendQuickQuery('What is India RAP safety rating?')" class="suggestion-pill">IndiaRAP Rating</button>
-                <button onclick="sendQuickQuery('Explain RAMS 300+ asset tracking')" class="suggestion-pill">300+ Assets</button>
-            </div>
-
-            <!-- Input Bar -->
-            <div class="p-3 bg-white border-t border-slate-200 flex gap-2">
-                <input type="text" id="chatInput" placeholder="Ask about IRC standards, repair rules..." class="flex-1 text-xs p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500" onkeypress="if(event.key === 'Enter') submitChatQuery()">
-                <button onclick="submitChatQuery()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+            <div class="p-3 bg-white border-t flex gap-2">
+                <input type="text" id="chatInput" placeholder="Ask about road conditions..." class="flex-1 text-xs p-2 border rounded-lg" onkeypress="if(event.key === 'Enter') submitChatQuery()">
+                <button onclick="submitChatQuery()" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
     </div>
 
-    <!-- ==========================================================================
-         12. JAVASCRIPT APP LOGIC & TELEMETRY INITIALIZER
-         ========================================================================== -->
+    <!-- JAVASCRIPT APP LOGIC -->
     <script>
-        // --- PRELOADER PROGRESS SIMULATION ---
+        // PRELOADER
         let progress = 0;
         const pInterval = setInterval(() => {
-            progress += Math.floor(Math.random() * 15) + 10;
+            progress += 25;
             if (progress >= 100) {
                 progress = 100;
                 clearInterval(pInterval);
-                setTimeout(() => {
-                    document.getElementById('athenaPreloader').classList.add('preloader-hidden');
-                }, 400);
+                setTimeout(() => document.getElementById('athenaPreloader').classList.add('preloader-hidden'), 250);
             }
             document.getElementById('preloaderBar').style.width = progress + '%';
             document.getElementById('preloaderPercent').innerText = progress + '%';
-        }, 120);
+        }, 60);
 
-        // --- DYNAMIC TYPEWRITER EFFECT ---
-        const typewriterPhrases = [
-            "Transforming Road Surveys through Artificial Intelligence",
-            "320+ Road Asset Categories Tracked with Computer Vision",
-            "Automated Indian Road Congress (IRC) Safety Audits",
-            "Adaptive Traffic Optimization & Predictive Maintenance",
-            "Real-Time Telemetry & GIS Defect Mapping"
+        // TYPEWRITER
+        const phrases = [
+            "RDD2022 Multi-National Object Detection: D00, D10, D20, D40",
+            "🟢 Green Marks = Optimal Condition, 🟡 Yellow = Actionable Improvement",
+            "🔴 Red Marks = Critical Damage with Visual & Telemetry Proofs",
+            "Real-time Smartphone-Based IRI & PotholeGuard Detection"
         ];
-        let phraseIndex = 0;
-        let charIndex = 0;
-        let isDeleting = false;
-        const typewriterEl = document.getElementById('typewriterText');
-
+        let pIdx = 0, cIdx = 0, isDel = false;
         function typeLoop() {
-            const currentPhrase = typewriterPhrases[phraseIndex];
-            if (isDeleting) {
-                typewriterEl.innerText = currentPhrase.substring(0, charIndex - 1);
-                charIndex--;
-            } else {
-                typewriterEl.innerText = currentPhrase.substring(0, charIndex + 1);
-                charIndex++;
-            }
-
-            let typeSpeed = isDeleting ? 30 : 60;
-            if (!isDeleting && charIndex === currentPhrase.length) {
-                typeSpeed = 2000;
-                isDeleting = true;
-            } else if (isDeleting && charIndex === 0) {
-                isDeleting = false;
-                phraseIndex = (phraseIndex + 1) % typewriterPhrases.length;
-                typeSpeed = 500;
-            }
-            setTimeout(typeLoop, typeSpeed);
+            const cur = phrases[pIdx];
+            document.getElementById('typewriterText').innerText = isDel ? cur.substring(0, cIdx - 1) : cur.substring(0, cIdx + 1);
+            cIdx = isDel ? cIdx - 1 : cIdx + 1;
+            let speed = isDel ? 20 : 45;
+            if (!isDel && cIdx === cur.length) { speed = 2000; isDel = true; }
+            else if (isDel && cIdx === 0) { isDel = false; pIdx = (pIdx + 1) % phrases.length; speed = 350; }
+            setTimeout(typeLoop, speed);
         }
         typeLoop();
 
-        // --- THEME TOGGLE ---
-        function toggleTheme() {
-            document.body.classList.toggle('dark-theme');
-            const icon = document.getElementById('themeIcon');
-            if (document.body.classList.contains('dark-theme')) {
-                icon.classList.replace('fa-moon', 'fa-sun');
-            } else {
-                icon.classList.replace('fa-sun', 'fa-moon');
-            }
-        }
+        function toggleTheme() { document.body.classList.toggle('dark-theme'); }
 
-        // --- TAB SWITCHING ---
-        function switchAthenaTab(tabId, btn) {
-            document.querySelectorAll('.tab-pane').forEach(p => {
-                p.classList.add('hidden-pane');
-                p.classList.remove('active-pane');
-            });
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
-                b.classList.add('bg-slate-100', 'text-slate-700');
-            });
+        // --- RDD2022 AI DETECTION LOGIC ---
+        async function runRddDetectionOnSample(imagePath) {
+            document.getElementById('rddInferenceImage').src = imagePath;
+            const overlay = document.getElementById('rddBboxOverlay');
+            overlay.innerHTML = '<div class="absolute inset-0 bg-black/40 flex items-center justify-center text-cyan-300 text-xs font-mono"><i class="fas fa-spinner fa-spin mr-2"></i> Analyzing Frame...</div>';
 
-            const target = document.getElementById(tabId);
-            if (target) {
-                target.classList.remove('hidden-pane');
-                target.classList.add('active-pane');
-            }
-            btn.classList.remove('bg-slate-100', 'text-slate-700');
-            btn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
-        }
-
-        // --- POPULATE ASSET GALLERY TRACKS ---
-        const ASSET_ITEMS_1 = [
-            { title: "Severe Pothole Cluster", icon: "fa-circle-exclamation", img: "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" },
-            { title: "Alligator Fatigue Cracks", icon: "fa-wave-square", img: "/static/assets/damaged_roads/alligator-cracks-1_jpg.rf.4d9f0f9bcf0bb53ffb4a6fa8087f9754.jpg" },
-            { title: "Speed Hump & Stripe Defect", icon: "fa-arrows-split-up-and-left", img: "/static/assets/damaged_roads/speed-hump-ahead-yellow-stripes-260nw-780891661_jpeg_jpg.rf.13e6f34dcce59001a205cc149d73af2f.jpg" },
-            { title: "W-Beam Crash Barrier", icon: "fa-shield-alt", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/Damaged-Road.mp4" },
-            { title: "Damaged Lighting Pole", icon: "fa-lightbulb", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/poles.mp4" },
-            { title: "Water Logging & Flooding", icon: "fa-water", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/Water+logging.mp4" }
-        ];
-
-        const ASSET_ITEMS_2 = [
-            { title: "Faded Pedestrian Crossing", icon: "fa-person-walking", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/Pavement-Markings.mp4" },
-            { title: "Kerb & Edge Drop Defect", icon: "fa-road", img: "/static/assets/damaged_roads/crack1.jpg" },
-            { title: "Major Surface Ravelling", icon: "fa-layer-group", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/Ravelling-Cracks.mp4" },
-            { title: "Construction Waste Debris", icon: "fa-dumpster", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/c%26d+waste.mp4" },
-            { title: "Night Survey Luminescence", icon: "fa-moon", video: "https://website-data-593333832687-ap-south-1-an.s3.ap-south-1.amazonaws.com/Roadatthena+website/night-furniture.mp4" }
-        ];
-
-        function renderMarqueeTracks() {
-            const track1 = document.getElementById('assetTrack1');
-            const track2 = document.getElementById('assetTrack2');
-            
-            function createCard(item) {
-                const isVideo = !!item.video;
-                const mediaSrc = item.img || item.video;
-                return `
-                    <div class="asset-card cursor-pointer bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm w-48 sm:w-56 shrink-0" onclick="openAssetModal('${item.title}', '${mediaSrc}', ${isVideo})">
-                        <div class="w-full h-28 sm:h-32 bg-slate-900 rounded-xl overflow-hidden relative flex items-center justify-center">
-                            ${item.img ? `<img src="${item.img}" class="w-full h-full object-cover" onerror="this.src='/static/assets/damaged_roads/pothole1.jpg'">` : `<i class="fas fa-play-circle text-teal-400 text-3xl"></i>`}
-                            <span class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-xs">
-                                ${isVideo ? 'VIDEO' : 'CV SCAN'}
-                            </span>
-                        </div>
-                        <div class="mt-2 text-center">
-                            <h4 class="text-xs font-bold text-slate-800 truncate">${item.title}</h4>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Duplicate array items for seamless infinite marquee loop
-            const fullList1 = [...ASSET_ITEMS_1, ...ASSET_ITEMS_1, ...ASSET_ITEMS_1];
-            const fullList2 = [...ASSET_ITEMS_2, ...ASSET_ITEMS_2, ...ASSET_ITEMS_2];
-
-            track1.innerHTML = fullList1.map(createCard).join('');
-            track2.innerHTML = fullList2.map(createCard).join('');
-        }
-        renderMarqueeTracks();
-
-        // --- ASSET MODAL PREVIEW ---
-        function openAssetModal(title, src, isVideo) {
-            document.getElementById('modalAssetTitle').innerText = title;
-            const imgEl = document.getElementById('modalAssetImage');
-            const vidEl = document.getElementById('modalAssetVideo');
-            const modal = document.getElementById('assetModal');
-
-            if (isVideo) {
-                imgEl.classList.add('hidden');
-                vidEl.classList.remove('hidden');
-                document.getElementById('modalAssetVideoSource').src = src;
-                vidEl.load();
-                vidEl.play();
-            } else {
-                vidEl.classList.add('hidden');
-                vidEl.pause();
-                imgEl.classList.remove('hidden');
-                imgEl.src = src;
-            }
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closeAssetModal() {
-            const modal = document.getElementById('assetModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.getElementById('modalAssetVideo').pause();
-        }
-
-        // --- DOMESTIC STATE PRESENCE API FETCH ---
-        async function fetchDomesticPresence() {
             try {
-                const res = await fetch('/api/v3/presence/domestic');
+                const res = await fetch('/api/v3/rdd/detect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_path: imagePath })
+                });
                 const data = await res.json();
                 
-                document.getElementById('stateTotalCount').innerText = `${data.total_states} States`;
-                document.getElementById('stateTotalKm').innerText = `${data.total_surveyed_km.toLocaleString()} km`;
-                document.getElementById('stateAvgHealth').innerText = `${data.national_average_health_index} / 100`;
-                document.getElementById('stateTotalDefects').innerText = `${data.total_active_defects.toLocaleString()} Segments`;
+                document.getElementById('rddInferenceTime').innerText = `Inference: ${data.inference_time_ms} ms (${Math.round(1000/data.inference_time_ms)} FPS)`;
+                document.getElementById('rddObjectCountBadge').innerText = `${data.total_objects_found} FOUND`;
 
-                const grid = document.getElementById('stateCardsGrid');
-                grid.innerHTML = data.states.map(s => `
-                    <div class="state-card p-3 rounded-xl cursor-pointer text-center" onclick="selectState('${s.state}', ${s.surveyed_km}, ${s.health_index}, '${s.status}')">
-                        <div class="w-8 h-8 mx-auto rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1 text-xs">
-                            <i class="fas fa-map-pin"></i>
+                // Render Bounding Boxes on Overlay
+                overlay.innerHTML = data.objects.map(obj => {
+                    const [xmin, ymin, xmax, ymax] = obj.bbox_normalized;
+                    const left = (xmin * 100) + '%';
+                    const top = (ymin * 100) + '%';
+                    const width = ((xmax - xmin) * 100) + '%';
+                    const height = ((ymax - ymin) * 100) + '%';
+                    return `
+                        <div class="rdd-bbox" style="left:${left}; top:${top}; width:${width}; height:${height};">
+                            <span class="rdd-label">${obj.class_code} ${(obj.confidence * 100).toFixed(0)}%</span>
                         </div>
-                        <h4 class="text-xs font-bold text-slate-800 truncate">${s.state}</h4>
-                        <span class="text-[10px] text-slate-500 mono">${s.surveyed_km} km</span>
+                    `;
+                }).join('');
+
+                // Render Detections List
+                document.getElementById('rddDetectionsList').innerHTML = data.objects.map(obj => `
+                    <div class="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-start justify-between">
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <strong class="text-cyan-400 font-mono">${obj.class_code}: ${obj.class_name}</strong>
+                                <span class="text-[10px] text-slate-400">(${(obj.confidence * 100).toFixed(1)}%)</span>
+                            </div>
+                            <p class="text-[11px] text-slate-300 mt-0.5">${obj.remedy}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${obj.severity === 'CRITICAL' ? 'bg-red-950 text-red-400' : 'bg-amber-950 text-amber-400'}">${obj.severity}</span>
                     </div>
                 `).join('');
             } catch (err) {
-                console.error("Failed to load domestic state reach data:", err);
+                overlay.innerHTML = '';
             }
         }
-        fetchDomesticPresence();
+        // Run initial detection on load
+        runRddDetectionOnSample('/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg');
 
-        function selectState(name, km, health, status) {
-            const detail = document.getElementById('selectedStateDetail');
-            detail.classList.remove('hidden');
-            document.getElementById('selectedStateName').innerText = name;
-            document.getElementById('selectedStateKm').innerText = `${km.toLocaleString()} km`;
-            document.getElementById('selectedStateHealth').innerText = `${health} / 100`;
-            document.getElementById('selectedStateStatus').innerText = status;
+        // --- ALL-INDIA ROAD DATA STATE ---
+        let currentStatusFilter = 'ALL';
+        let currentCityFilter = 'ALL';
+        let activeModalRoadId = null;
+
+        async function fetchRoadBounceRoads() {
+            try {
+                let url = '/api/v3/roadbounce/roads?';
+                if (currentCityFilter !== 'ALL') url += `city=${encodeURIComponent(currentCityFilter)}&`;
+                if (currentStatusFilter !== 'ALL') url += `status=${currentStatusFilter}&`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                document.getElementById('countAll').innerText = data.total;
+                document.getElementById('countGreen').innerText = data.summary.green;
+                document.getElementById('countYellow').innerText = data.summary.yellow;
+                document.getElementById('countRed').innerText = data.summary.red;
+
+                document.getElementById('kpiGreenCount').innerText = data.summary.green;
+                document.getElementById('kpiYellowCount').innerText = data.summary.yellow;
+                document.getElementById('kpiRedCount').innerText = data.summary.red;
+
+                renderRoadCards(data.roads);
+            } catch (err) {}
         }
 
-        // --- IRC COMPLIANCE TESTER API ---
+        function renderRoadCards(roads) {
+            const grid = document.getElementById('roadCardsGrid');
+            if (!roads || roads.length === 0) {
+                grid.innerHTML = `<div class="col-span-3 p-12 text-center text-slate-500 bg-slate-50 rounded-2xl"><p class="font-bold">No road segments found.</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = roads.map(r => {
+                let statusBadge = "";
+                let cardClass = "";
+                let actionBtn = "";
+
+                if (r.condition_status === 'GREEN') {
+                    cardClass = "road-card-green bg-white";
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Optimal Green</span>`;
+                    actionBtn = `<button class="w-full py-2 bg-slate-100 text-slate-500 rounded-xl text-xs font-semibold cursor-default"><i class="fas fa-check text-emerald-500 mr-1"></i> Condition Satisfactory</button>`;
+                } else if (r.condition_status === 'YELLOW') {
+                    cardClass = "road-card-yellow bg-amber-50/20";
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Needs Improvement</span>`;
+                    actionBtn = `<button onclick="remediateRoadDirect('${r.road_id}', 'GREEN')" class="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm"><i class="fas fa-magic mr-1"></i> Improve & Convert to Green 🟢</button>`;
+                } else {
+                    cardClass = "road-card-red bg-rose-50/20";
+                    statusBadge = `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Critical Damage</span>`;
+                    actionBtn = `<button onclick="openProofModal('${r.road_id}')" class="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm"><i class="fas fa-search-plus mr-1"></i> View Photo Proof & Repair</button>`;
+                }
+
+                return `
+                    <div class="${cardClass} p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-3">
+                                <div>
+                                    <span class="text-[10px] font-mono text-slate-400 font-bold block">${r.road_id} • ${r.city}, ${r.state}</span>
+                                    <h4 class="font-bold text-slate-900 text-sm mt-0.5 leading-snug">${r.road_name}</h4>
+                                </div>
+                                ${statusBadge}
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-2 text-center text-xs mono p-2.5 bg-slate-50 rounded-xl mb-3">
+                                <div>
+                                    <span class="text-[9px] text-slate-500 block">IRI</span>
+                                    <strong class="${r.iri_score < 2.5 ? 'text-emerald-600' : (r.iri_score <= 4.0 ? 'text-amber-600' : 'text-rose-600')} text-sm">${r.iri_score}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] text-slate-500 block">PCI</span>
+                                    <strong class="text-slate-800 text-sm">${r.pci_score}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] text-slate-500 block">G-Force</span>
+                                    <strong class="text-slate-800 text-sm">${r.vibration_gforce_peak}G</strong>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-600 mb-4 line-clamp-2">${r.recommended_action}</p>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                                <span>Est. Repair: <strong class="text-slate-800">₹${r.estimated_cost_inr.toLocaleString()}</strong></span>
+                                <button onclick="openProofModal('${r.road_id}')" class="text-blue-600 hover:underline font-bold text-xs"><i class="fas fa-camera mr-1"></i>Proof</button>
+                            </div>
+                            ${actionBtn}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterByStatus(status, btn) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.status-tab-btn').forEach(b => {
+                b.classList.remove('bg-slate-900', 'text-white');
+                b.classList.add('bg-white');
+            });
+            btn.classList.add('bg-slate-900', 'text-white');
+            fetchRoadBounceRoads();
+        }
+
+        function filterByCity(city, btn) {
+            currentCityFilter = city;
+            document.querySelectorAll('.city-pill').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-slate-100', 'text-slate-700');
+            });
+            btn.classList.add('bg-blue-600', 'text-white');
+            fetchRoadBounceRoads();
+        }
+
+        async function remediateRoadDirect(roadId, targetStatus) {
+            try {
+                await fetch('/api/v3/roadbounce/remediate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        road_id: roadId,
+                        target_status: targetStatus,
+                        remediated_by: "Municipal Smart Road Crew",
+                        notes: "Preventative micro-surfacing and crack seal executed."
+                    })
+                });
+                fetchRoadBounceRoads();
+            } catch (err) {}
+        }
+
+        async function openProofModal(roadId) {
+            activeModalRoadId = roadId;
+            try {
+                const res = await fetch(`/api/v3/roadbounce/proof/${roadId}`);
+                const data = await res.json();
+
+                document.getElementById('proofModalRoadId').innerText = data.road_id;
+                document.getElementById('proofModalRoadName').innerText = `${data.road_name} (${data.city}, ${data.state})`;
+                document.getElementById('proofModalImage').src = data.proof_image_url || '/static/assets/damaged_roads/pothole1.jpg';
+                document.getElementById('proofModalIri').innerText = `${data.iri_score} m/km`;
+                document.getElementById('proofModalGforce').innerText = `${data.vibration_gforce_peak} G`;
+                document.getElementById('proofModalPotholes').innerText = data.pothole_count;
+                document.getElementById('proofModalAction').innerText = data.recommended_action;
+                document.getElementById('proofModalCost').innerText = `Estimated Budget: ₹${data.estimated_cost_inr.toLocaleString()}`;
+
+                const badge = document.getElementById('proofModalBadge');
+                badge.innerText = data.condition_status;
+                badge.className = data.condition_status === 'GREEN' 
+                    ? 'px-2.5 py-0.5 rounded text-[10px] font-bold uppercase mono bg-emerald-900 text-emerald-300' 
+                    : (data.condition_status === 'YELLOW' 
+                        ? 'px-2.5 py-0.5 rounded text-[10px] font-bold uppercase mono bg-amber-900 text-amber-300' 
+                        : 'px-2.5 py-0.5 rounded text-[10px] font-bold uppercase mono bg-rose-900 text-rose-300');
+
+                document.getElementById('proofModal').classList.remove('hidden');
+                document.getElementById('proofModal').classList.add('flex');
+            } catch (err) {}
+        }
+
+        function closeProofModal() {
+            document.getElementById('proofModal').classList.add('hidden');
+            document.getElementById('proofModal').classList.remove('flex');
+        }
+
+        async function executeRemediationFromModal() {
+            if (!activeModalRoadId) return;
+            await remediateRoadDirect(activeModalRoadId, 'GREEN');
+            closeProofModal();
+        }
+
+        // MARQUEE
+        const ASSET_ITEMS_1 = [
+            { title: "Severe Pothole (D40)", img: "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" },
+            { title: "Alligator Fatigue (D20)", img: "/static/assets/damaged_roads/alligator-cracks-1_jpg.rf.4d9f0f9bcf0bb53ffb4a6fa8087f9754.jpg" },
+            { title: "Crosswalk Blur (D43)", img: "/static/assets/damaged_roads/speed-hump-ahead-yellow-stripes-260nw-780891661_jpeg_jpg.rf.13e6f34dcce59001a205cc149d73af2f.jpg" },
+            { title: "Longitudinal Crack (D00)", img: "/static/assets/damaged_roads/crack1.jpg" }
+        ];
+
+        function renderAssetTracks() {
+            const track1 = document.getElementById('assetTrack1');
+            const track2 = document.getElementById('assetTrack2');
+            const list = [...ASSET_ITEMS_1, ...ASSET_ITEMS_1, ...ASSET_ITEMS_1];
+            const html = list.map(item => `
+                <div class="bg-white rounded-2xl p-2.5 border border-slate-200 w-44 shrink-0 shadow-xs">
+                    <img src="${item.img}" class="w-full h-24 object-cover rounded-xl" onerror="this.src='/static/assets/damaged_roads/pothole1.jpg'">
+                    <h5 class="text-[11px] font-bold text-slate-800 text-center mt-2 truncate">${item.title}</h5>
+                </div>
+            `).join('');
+            if (track1) track1.innerHTML = html;
+            if (track2) track2.innerHTML = html;
+        }
+        renderAssetTracks();
+
+        // IRC COMPLIANCE
         async function runIrcComplianceCheck() {
             const pothole = parseFloat(document.getElementById('ircPotholeInput').value);
             const crack = parseFloat(document.getElementById('ircCrackInput').value);
@@ -1104,154 +796,83 @@
                 const res = await fetch('/api/v3/compliance/irc-check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        pothole_depth_mm: pothole,
-                        crack_width_mm: crack,
-                        marking_retroreflectivity: retro
-                    })
+                    body: JSON.stringify({ pothole_depth_mm: pothole, crack_width_mm: crack, marking_retroreflectivity: retro })
                 });
                 const data = await res.json();
+                const score = document.getElementById('ircAuditScore');
+                score.innerText = `${data.compliance_score_percent}% ${data.ca_clause_status}`;
+                score.className = data.penalty_risk_flag ? 'px-3 py-1 bg-red-100 text-red-800 rounded-full font-mono font-bold text-xs' : 'px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-mono font-bold text-xs';
                 
-                const scoreEl = document.getElementById('ircAuditScore');
-                scoreEl.innerText = `${data.compliance_score_percent}% ${data.ca_clause_status}`;
-                scoreEl.className = data.penalty_risk_flag 
-                    ? 'px-3 py-1 bg-red-100 text-red-800 rounded-full font-mono font-bold text-xs'
-                    : 'px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-mono font-bold text-xs';
-
-                const list = document.getElementById('ircEvaluationsList');
-                list.innerHTML = data.evaluations.map(e => `
+                document.getElementById('ircEvaluationsList').innerHTML = data.evaluations.map(e => `
                     <div class="flex items-center justify-between p-2 rounded ${e.status === 'PASS' ? 'bg-emerald-50 text-emerald-900' : 'bg-red-50 text-red-900'}">
-                        <div>
-                            <strong>${e.parameter}:</strong> ${e.value} (Limit: ${e.threshold}) — <span class="text-xs">${e.standard}</span>
-                        </div>
-                        <span class="font-bold text-xs ${e.status === 'PASS' ? 'text-emerald-700' : 'text-red-700'}">${e.status}</span>
+                        <span><strong>${e.parameter}:</strong> ${e.value} (Limit: ${e.threshold})</span>
+                        <span class="font-bold">${e.status}</span>
                     </div>
                 `).join('');
-            } catch (err) {
-                console.error("IRC check failed:", err);
-            }
+            } catch (err) {}
         }
         runIrcComplianceCheck();
 
-        // --- ADAPTIVE TRAFFIC SIGNAL CONTROLLER ---
+        // OPERATIONS
         async function fetchAdaptiveTrafficSignals() {
-            try {
-                const res = await fetch('/api/v3/traffic/adaptive-signals?city=Delhi');
-                const data = await res.json();
-                document.getElementById('trafficCity').innerText = data.city;
-                document.getElementById('trafficTiming').innerText = `${data.allocated_green_seconds} seconds (${data.congestion_level})`;
-            } catch (err) {
-                console.error("Traffic API error:", err);
-            }
+            const res = await fetch('/api/v3/traffic/adaptive-signals?city=Delhi');
+            const data = await res.json();
+            document.getElementById('trafficOutput').innerText = `Green: ${data.allocated_green_seconds}s (${data.congestion_level})`;
         }
 
-        // --- HAZARD REROUTING ENGINE ---
         async function calculateHazardReroute() {
-            try {
-                const res = await fetch('/api/v3/navigation/reroute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ origin: "Connaught Place", destination: "Airport Terminal 3" })
-                });
-                const data = await res.json();
-                document.getElementById('rerouteHazards').innerText = `${data.hazard_bypassed_count} Bypassed (${data.estimated_travel_time_mins} mins)`;
-            } catch (err) {
-                console.error("Reroute API error:", err);
-            }
+            const res = await fetch('/api/v3/navigation/reroute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ origin: "CP", destination: "Airport" })
+            });
+            const data = await res.json();
+            document.getElementById('rerouteOutput').innerText = `Bypassed: ${data.hazard_bypassed_count} hazards (${data.estimated_travel_time_mins} mins)`;
         }
 
-        // --- FIELD VOICE DISPATCH ---
         async function submitVoiceDispatch() {
             const text = document.getElementById('voiceTextInput').value.trim();
             if (!text) return;
-            const statusEl = document.getElementById('voiceDispatchStatus');
-            statusEl.innerText = "Dispatching NLP report...";
-            try {
-                const res = await fetch('/api/voice/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ road_id: "R-101", transcript: text })
-                });
-                const data = await res.json();
-                statusEl.innerText = `✓ Dispatched! Urgency: ${data.sentiment} (${data.urgency_score})`;
-                document.getElementById('voiceTextInput').value = '';
-            } catch (err) {
-                statusEl.innerText = "Report dispatched to offline buffer.";
-            }
+            const res = await fetch('/api/voice/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ road_id: "R-101", transcript: text })
+            });
+            const data = await res.json();
+            document.getElementById('voiceDispatchStatus').innerText = `✓ Dispatched: ${data.sentiment}`;
         }
 
-        // --- CHATBOT WIDGET LOGIC ---
-        function toggleChatbot() {
-            document.getElementById('chatbotWindow').classList.toggle('hidden');
-        }
-
-        function sendQuickQuery(query) {
-            document.getElementById('chatInput').value = query;
-            submitChatQuery();
-        }
+        function toggleChatbot() { document.getElementById('chatbotWindow').classList.toggle('hidden'); }
 
         async function submitChatQuery() {
             const input = document.getElementById('chatInput');
-            const query = input.value.trim();
-            if (!query) return;
-
-            const messages = document.getElementById('chatMessages');
-            messages.innerHTML += `<div class="chat-bubble-user">${query}</div>`;
+            const q = input.value.trim();
+            if (!q) return;
+            const msgs = document.getElementById('chatMessages');
+            msgs.innerHTML += `<div class="chat-bubble-user">${q}</div>`;
             input.value = '';
-            messages.scrollTop = messages.scrollHeight;
+            msgs.scrollTop = msgs.scrollHeight;
 
-            try {
-                const res = await fetch('/api/v3/chat/irc-assistant', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
-                });
-                const data = await res.json();
-                messages.innerHTML += `<div class="chat-bubble-bot">${data.response}</div>`;
-                messages.scrollTop = messages.scrollHeight;
-            } catch (err) {
-                messages.innerHTML += `<div class="chat-bubble-bot">Athena intelligence engine connected. System monitoring normal.</div>`;
-            }
+            const res = await fetch('/api/v3/chat/irc-assistant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q })
+            });
+            const data = await res.json();
+            msgs.innerHTML += `<div class="chat-bubble-bot">${data.response}</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
         }
 
-        // --- GOOGLE MAP & SEGMENT DATA LOGIC ---
-        let map;
         window.initMap = function() {
             const mapEl = document.getElementById('map');
             if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-                mapEl.innerHTML = `<div class="p-12 text-center text-slate-500">
-                    <i class="fas fa-map-marked-alt text-4xl text-blue-500 mb-3"></i>
-                    <h4 class="font-bold text-slate-800">Telemetry Visualizer</h4>
-                    <p class="text-xs">Live map markers active for 13,000+ Indian highway segments.</p>
-                </div>`;
+                mapEl.innerHTML = `<div class="p-12 text-center text-slate-500"><i class="fas fa-map-marked-alt text-4xl text-emerald-500 mb-2"></i><h4 class="font-bold text-slate-800">All-India Road Telemetry Map</h4><p class="text-xs">Live GPS stream active.</p></div>`;
                 return;
             }
-
-            map = new google.maps.Map(mapEl, {
-                center: { lat: 28.6139, lng: 77.2090 },
-                zoom: 11,
-                streetViewControl: false
-            });
-            document.getElementById('loadingOverlay')?.remove();
+            new google.maps.Map(mapEl, { center: { lat: 20.5937, lng: 78.9629 }, zoom: 5 });
         }
 
-        function applyFiltersAndRender() {
-            const red = Math.floor(Math.random() * 5) + 3;
-            const yellow = Math.floor(Math.random() * 8) + 6;
-            const green = Math.floor(Math.random() * 20) + 25;
-            document.getElementById('stat-red').innerText = red;
-            document.getElementById('stat-yellow').innerText = yellow;
-            document.getElementById('stat-green').innerText = green;
-        }
-        applyFiltersAndRender();
-
-        function handleSearchKey(e) {
-            if (e.key === 'Enter') searchMap();
-        }
-
-        function searchMap() {
-            applyFiltersAndRender();
-        }
+        fetchRoadBounceRoads();
     </script>
 </body>
 </html>

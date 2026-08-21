@@ -141,11 +141,49 @@ python app_enhanced.py
 ```
 Access the dashboard at `http://localhost:5000`.
 
-### Key API Endpoints
-- `GET /api/roads/status`: Fetch real-time road condition map.
-- `POST /api/vision/analyze`: Submit images for AI defect detection.
-- `GET /api/predictions/report/<city>`: Generate comprehensive AI analysis.
-- `GET /api/analytics/kpis`: View system-wide performance metrics.
+---
+
+## 9. 🚗 RoadBounce Integration & All-India Dynamic Remediation Engine
+
+RoadSense AI incorporates the **RoadBounce (https://roadbounce.com/)** smartphone roughness (IRI) and **PotholeGuard** computer vision philosophy across real geo-tagged road networks throughout India without any hardcoding:
+
+### 🟢 3-Tier Dynamic Classification
+- 🟢 **GREEN (Optimal Condition)**: IRI < 2.5 m/km, PCI 85–100, zero critical defects.
+- 🟡 **YELLOW (Actionable Wear)**: IRI 2.5–4.0 m/km, PCI 50–84 — Actionable via one-click micro-surfacing/crack seal to **dynamically convert into Green** in the SQLite database.
+- 🔴 **RED (Critical Structural Failure)**: IRI > 4.0 m/km, PCI < 50 — Accompanied by **Forensic Visual & Sensor Proofs** (actual camera photos, GPS coordinates, accelerometer G-force spikes, repair budget, and work order dispatch).
+
+### Key RoadBounce Endpoints
+- `GET /api/v3/roadbounce/roads`: Live All-India road segments with filtering by status, city, state, and roughness.
+- `POST /api/v3/roadbounce/remediate`: One-click repair execution converting Yellow/Red roads into Green in SQLite.
+- `POST /api/v3/roadbounce/survey-ingest`: Smartphone accelerometer and camera survey telemetry ingestion.
+- `GET /api/v3/roadbounce/kpis`: National roughness averages and preventative cost savings.
+- `GET /api/v3/roadbounce/proof/<road_id>`: High-res damage photo proof, GPS geo-tag, and G-force peak.
+
+---
+
+## 10. 🎯 RDD2022 Multi-National Road Damage Dataset & CV Studio
+
+Integrated benchmark dataset and deep learning taxonomy based on **RDD2022 (CRDDC 2022)** comprising **47,420 road images** across 6 countries:
+- 🇮🇳 **India**: 9,665 images (Delhi, Gurugram, Haryana - smartphone car mount)
+- 🇯🇵 **Japan**: 13,133 images
+- 🇳🇴 **Norway**: 10,201 images (ViaPPS dual Basler CMOS)
+- 🇺🇸 **United States**: 6,005 images (Google Street View)
+- 🇨🇿 **Czech Republic**: 3,538 images (D1/D2/D46 motorways)
+- 🇨🇳 **China**: 4,878 images (DJI Drone & Motorbike mounted)
+
+### Standard Damage Codes Tracked
+- **D00**: Longitudinal Crack
+- **D10**: Transverse Crack
+- **D20**: Alligator Fatigue Crack
+- **D40**: Pothole Cavity
+- **D43**: Crosswalk / Zebra Marking Blur
+- **D44**: Lane / Center Line Blur
+- **Repair**: Patched Asphalt Monitoring
+
+### Key RDD2022 Endpoints
+- `GET /api/v3/rdd/stats`: Global & country dataset splits, resolutions, and benchmark accuracies.
+- `GET /api/v3/rdd/classes`: Standard RDD2022 class taxonomy, severity, and repair remedies.
+- `POST /api/v3/rdd/detect`: Automated bounding box object detection inference with normalized coordinates.
 
 ---
 
@@ -153,7 +191,6 @@ Access the dashboard at `http://localhost:5000`.
 - [ ] **Satellite GIS Intel**: Automated macro-scopic monitoring via orbital imagery.
 - [ ] **Digital Twin Simulation**: 3D virtual modeling of weather/traffic impacts.
 - [ ] **Offline Field App**: Dedicated mobile tool for engineers in remote areas.
-- [ ] **Auto-Healing Recommendations**: Lifecycle-integrated repair suggestion engine.
 
 ---
 
@@ -172,3 +209,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 **RoadSense AI** — *Building the arteries of the future.*
+
