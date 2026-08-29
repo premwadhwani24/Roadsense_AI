@@ -1819,11 +1819,25 @@ def gov_location_search():
     if not query and (lat is None or lng is None):
         return jsonify({"results": [], "count": 0}), 200
 
-    # 1. Search in Pan-India GIS Registry first (PIN codes, highways, districts)
-    registry_matches = GISRoadNetworkEngine.search_registry_by_query(query) if query else []
-    
-    # 2. Search external / geocoding providers via LocationSearchEngine
-    geo_results = LocationSearchEngine.search_location(query=query, lat=lat, lng=lng) if query else []
+    # 1. Search in SQLite gov_road_segments table
+    registry_matches = []
+    if query:
+        db_segs = DatabaseManager.get_gov_segments()
+        q_lower = query.lower().strip()
+        for seg in db_segs:
+            if (q_lower in seg["road_name"].lower() or
+                q_lower in seg.get("city", "").lower() or
+                q_lower in seg.get("district", "").lower() or
+                q_lower in seg.get("state", "").lower() or
+                q_lower in seg.get("pincode", "").lower() or
+                q_lower in seg.get("highway_code", "").lower() or
+                q_lower in seg["segment_id"].lower()):
+                registry_matches.append(seg)
+
+    # 2. Search OpenStreetMap Nominatim live geocoder
+    geo_results = GISRoadNetworkEngine.geocode_location_nominatim(query) if query else []
+    if not geo_results:
+        geo_results = LocationSearchEngine.search_location(query=query, lat=lat, lng=lng) if query else []
 
     combined = []
     seen = set()

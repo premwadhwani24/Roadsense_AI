@@ -52,6 +52,8 @@ def point_to_segment_distance_meters(px: float, py: float, x1: float, y1: float,
 
 
 class GISRoadNetworkEngine:
+    PAN_INDIA_REGISTRY = []
+
     """Dynamically queries live OpenStreetMap Overpass API and manages pan-India road geometries."""
 
     OVERPASS_ENDPOINTS = [
@@ -271,8 +273,47 @@ class GISRoadNetworkEngine:
         return []
 
     @staticmethod
-    def snap_point_to_nearest_segment(lat: float, lng: float, segments: List[Dict[str, Any]], max_snap_distance_m: float = 120.0) -> Tuple[Optional[str], float]:
+    def search_registry_by_query(query: str) -> List[Dict[str, Any]]:
+        """Searches by PIN code, district, city, highway name, or state in SQLite DB and Nominatim."""
+        from database import DatabaseManager
+        segments = DatabaseManager.get_gov_segments()
+        q_lower = query.lower().strip()
+        matches = []
+        for segment in segments:
+            if (q_lower in segment["road_name"].lower() or
+                q_lower in segment.get("city", "").lower() or
+                q_lower in segment.get("district", "").lower() or
+                q_lower in segment.get("state", "").lower() or
+                q_lower in segment.get("pincode", "").lower() or
+                q_lower in segment.get("highway_code", "").lower() or
+                q_lower in segment["segment_id"].lower()):
+                matches.append(segment)
+
+        if not matches:
+            geo_res = GISRoadNetworkEngine.geocode_location_nominatim(query)
+            for g in geo_res:
+                matches.append({
+                    "segment_id": f"OSM-SEARCH-{int(g['latitude']*1000)}",
+                    "road_name": g["display_name"],
+                    "road_type": g["road_type"],
+                    "highway_code": "SEARCH",
+                    "state": g["state"] or "India",
+                    "district": g["district"] or "District Area",
+                    "city": g["city"] or "City Division",
+                    "pincode": g["pincode"] or "110001",
+                    "jurisdiction_agency": "Public Works Department / Municipal Corporation",
+                    "center_lat": g["latitude"],
+                    "center_lng": g["longitude"]
+                })
+        return matches
+
+    @staticmethod
+    def snap_point_to_nearest_segment(lat: float, lng: float, segments: Optional[List[Dict[str, Any]]] = None, max_snap_distance_m: float = 120.0) -> Tuple[Optional[str], float]:
         """Snaps any defect or GPS point to the closest road segment polyline."""
+        if segments is None:
+            from database import DatabaseManager
+            segments = DatabaseManager.get_gov_segments()
+
         best_segment_id = None
         min_dist_m = float("inf")
 
