@@ -312,3 +312,30 @@ The RoadSense AI platform includes complete **real-world production deployment f
 - `GET /api/v3/satellite/radar-scans` — Sentinel-2 / ISRO Bhuvan remote highway radar scans
 - `POST /api/v3/emergency/smooth-route` — Ambulance smooth-ride hazard avoidance pathfinder
 - `GET /api/v3/gov/export/gati-shakti-geojson` — Export PM Gati Shakti National Master Plan GeoJSON
+
+---
+
+## 🧠 AI / Computer Vision Defect Detection Pipeline
+
+### 📊 Dataset Integration:
+- **Dataset**: `Cracks and Potholes in Road Images Dataset` (2,235 survey samples with binary ground-truth segmentation masks for CRACK, POTHOLE, and LANE).
+- **Class Breakdown**:
+  - `Crack`: 1,440 samples
+  - `Pothole`: 563 samples
+  - `Normal`: 232 samples
+- **Dataset Manifest**: `dataset_manifest.csv` with 80/20 train/validation stratified splits.
+
+### 🔬 Architecture & Model:
+- **Backbone**: `RoadDefectResNet` (Pure PyTorch ResNet-18 implementation in `road_defect_model.py`).
+- **Features**: Fast PIL transforms, data augmentation (horizontal flip, random rotation, brightness jitter), ImageNet normalization.
+- **Loss Function**: Class-weighted CrossEntropyLoss + Cosine Annealing learning rate schedule.
+
+### 🏋️ Model Training & CLI:
+```bash
+# Train ResNet-18 model on Cracks and Potholes dataset
+python train_road_defects.py --epochs 5 --batch-size 32 --lr 0.0003 --output road_defect_cnn.pt
+```
+
+### 🔍 Vision Inference API:
+- `POST /api/vision/analyze` — Computer vision analysis returning predicted label (`Pothole`, `Crack`, `Normal`), confidence %, defect severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `NORMAL`), and actionable repair guidance.
+

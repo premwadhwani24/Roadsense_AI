@@ -249,6 +249,14 @@ def init_database():
         )
     ''')
 
+    # Add dynamic condition_score and zone columns if not present
+    for col_sql in ["condition_score REAL", "zone TEXT DEFAULT 'GREEN'"]:
+        try:
+            cursor.execute(f"ALTER TABLE gov_road_segments ADD COLUMN {col_sql}")
+        except sqlite3.OperationalError:
+            pass
+
+
     # Road Condition Evidence Records (Camera Photos, Sensor Waveforms, Bounding Boxes)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS road_evidence_records (

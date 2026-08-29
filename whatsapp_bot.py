@@ -58,12 +58,10 @@ class WhatsAppBotEngine:
 
         # 3. Create Citizen Report in SQLite
         report_id = DatabaseManager.add_citizen_report(
-            user_id=1,
             road_id=snapped_segment_id,
             road_name=road_name,
             issue_type="POTHOLE_CRITICAL" if potholes > 0 else "CRACK_DISTRESS",
-            description=f"WhatsApp Citizen Report from {phone_number}: {user_notes}",
-            image_url=image_url,
+            description=f"WhatsApp Citizen Report from {phone_number}: {user_notes}. Photo: {image_url}",
             latitude=latitude,
             longitude=longitude
         )
