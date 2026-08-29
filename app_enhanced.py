@@ -2277,6 +2277,157 @@ def gov_kpis():
     """Returns high-level government KPIs, condition distribution, and budget savings."""
     return jsonify(GovAdminService.get_national_kpis()), 200
 
+
+# ====================================================================================
+# PHASE 9: REAL-WORLD PRODUCTION DEPLOYMENT & GOVERNMENT INTEGRATION ENDPOINTS
+# ====================================================================================
+from live_stream_service import LiveStreamService
+from whatsapp_bot import WhatsAppBotEngine
+from contractor_engine import ContractorSLAEngine
+from satellite_engine import SatelliteRadarEngine
+from emergency_routing import EmergencyRoutingEngine
+
+@app.route("/api/v3/fleet/live-streams", methods=["GET"])
+def live_fleet_streams():
+    """Returns list of active patrol vehicles streaming live video & GPS coordinates."""
+    fleet = LiveStreamService.get_active_fleet()
+    return jsonify({
+        "total_active_patrol_vehicles": len(fleet),
+        "fleet": fleet,
+        "streaming_protocol": "WEBRTC_RTSP_REALTIME"
+    }), 200
+
+@app.route("/api/v3/fleet/process-frame", methods=["POST"])
+def live_fleet_process_frame():
+    """Extracts live video stream frame, executes CV inference, and snaps to GIS road segment."""
+    data = request.get_json() or {}
+    vehicle_id = data.get("vehicle_id", "VEH-DEL-PCR-01")
+    lat = data.get("latitude")
+    lng = data.get("longitude")
+    res = LiveStreamService.process_live_stream_frame(vehicle_id, lat=lat, lng=lng)
+    return jsonify(res), 200
+
+@app.route("/api/v3/whatsapp/webhook", methods=["POST", "GET"])
+@app.route("/api/v3/whatsapp/simulate-report", methods=["POST"])
+def whatsapp_bot_report():
+    """
+    WhatsApp Bot & Citizen Instant Photo Reporting Webhook.
+    Processes citizen photo + GPS coordinates, runs CV inference, snaps to road,
+    and returns instant WhatsApp reply message.
+    """
+    data = request.get_json() or request.form.to_dict() or {}
+    phone = data.get("phone_number", "+919876543210")
+    image_url = data.get("image_url", "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg")
+    lat = float(data.get("latitude", 28.5450))
+    lng = float(data.get("longitude", 77.1250))
+    notes = data.get("user_notes", "Critical pothole on main road")
+
+    res = WhatsAppBotEngine.process_incoming_report(
+        phone_number=phone,
+        image_url=image_url,
+        latitude=lat,
+        longitude=lng,
+        user_notes=notes
+    )
+    return jsonify(res), 200
+
+@app.route("/api/v3/contractors/slas", methods=["GET"])
+def contractor_slas_list():
+    """Returns contractor registry, SLA compliance ratings, and escrow balances."""
+    contractors = ContractorSLAEngine.get_all_contractors()
+    return jsonify({
+        "total_registered_contractors": len(contractors),
+        "contractors": contractors,
+        "standard": "IRC:SP:84-2019 Mandatory 72-Hour Repair SLA"
+    }), 200
+
+@app.route("/api/v3/contractors/penalize", methods=["POST"])
+def contractor_evaluate_penalty():
+    """Evaluates work order SLA deadline and calculates daily financial penalty."""
+    data = request.get_json() or {}
+    work_order_id = int(data.get("work_order_id", 301))
+    contractor_id = data.get("contractor_id", "CON-IND-01")
+    hours_elapsed = float(data.get("hours_elapsed", 84.0))
+
+    res = ContractorSLAEngine.evaluate_work_order_sla(work_order_id, contractor_id, hours_elapsed)
+    return jsonify(res), 200
+
+@app.route("/api/v3/satellite/radar-scans", methods=["GET"])
+def satellite_radar_scans():
+    """Returns ISRO Bhuvan & Sentinel-2 satellite radar scans for high-altitude corridors."""
+    scans = SatelliteRadarEngine.get_corridor_scans()
+    return jsonify({
+        "monitored_corridors_count": len(scans),
+        "corridors": scans,
+        "constellations": ["SENTINEL-2_SAR", "ISRO_BHUVAN_NDIS"]
+    }), 200
+
+@app.route("/api/v3/satellite/scan-location", methods=["POST"])
+def satellite_scan_location():
+    """Executes synthetic satellite SAR radar scan over coordinates for sub-surface moisture."""
+    data = request.get_json() or {}
+    lat = float(data.get("latitude", 32.2396))
+    lng = float(data.get("longitude", 77.1887))
+    corridor = data.get("corridor_name", "Leh-Manali Highway")
+
+    res = SatelliteRadarEngine.scan_location_satellite_radar(lat, lng, corridor)
+    return jsonify(res), 200
+
+@app.route("/api/v3/emergency/smooth-route", methods=["POST"])
+def emergency_smooth_route():
+    """Calculates hazard-free smooth navigation for ambulances avoiding potholes and vibration shocks."""
+    data = request.get_json() or {}
+    o_lat = float(data.get("origin_lat", 28.6139))
+    o_lng = float(data.get("origin_lng", 77.2090))
+    d_lat = float(data.get("dest_lat", 28.5450))
+    d_lng = float(data.get("dest_lng", 77.1250))
+    v_type = data.get("vehicle_type", "CRITICAL_CARE_AMBULANCE")
+
+    res = EmergencyRoutingEngine.calculate_smooth_emergency_route(o_lat, o_lng, d_lat, d_lng, v_type)
+    return jsonify(res), 200
+
+@app.route("/api/v3/gov/export/gati-shakti-geojson", methods=["GET"])
+def export_gati_shakti_geojson():
+    """Exports GeoJSON dataset compliant with PM Gati Shakti National Master Plan schema."""
+    segments = DatabaseManager.get_gov_segments()
+    features = []
+
+    for seg in segments:
+        poly = seg.get("polyline", [])
+        # GeoJSON uses [lng, lat]
+        coords_geojson = [[pt[1], pt[0]] for pt in poly] if poly else [[seg["center_lng"], seg["center_lat"]]]
+        
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString" if len(coords_geojson) > 1 else "Point",
+                "coordinates": coords_geojson if len(coords_geojson) > 1 else coords_geojson[0]
+            },
+            "properties": {
+                "segment_id": seg["segment_id"],
+                "road_name": seg["road_name"],
+                "road_type": seg.get("road_type", "Urban Arterial"),
+                "state": seg.get("state", "Delhi"),
+                "district": seg.get("district", "Central"),
+                "city": seg.get("city", "New Delhi"),
+                "pincode": seg.get("pincode", "110001"),
+                "length_km": seg.get("length_km", 1.0),
+                "condition_status": seg.get("condition_status", "DATA_UNAVAILABLE"),
+                "health_score": seg.get("health_score"),
+                "gati_shakti_layer": "NATIONAL_TRANSPORT_INFRASTRUCTURE"
+            }
+        })
+
+    geojson_data = {
+        "type": "FeatureCollection",
+        "standard": "PM_GATI_SHAKTI_NATIONAL_MASTER_PLAN_SCHEMA_V2",
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "total_features": len(features),
+        "features": features
+    }
+
+    return jsonify(geojson_data), 200
+
 if __name__ == "__main__":
     logger.info("Starting RoadSense Enhanced Backend")
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1045,6 +1045,140 @@ def test_gov_hierarchy_and_kpis():
         print(f"❌ Error: {e}")
         return False
 
+
+def test_live_fleet_streams():
+    """Test 47: Live Mobile & Dashcam WebRTC Streaming & Fleet Tracking"""
+    print_section("Test 47: Live Dashcam Fleet Streaming")
+    try:
+        r1 = requests.get(f"{BASE_URL}/api/v3/fleet/live-streams")
+        r2 = requests.post(f"{BASE_URL}/api/v3/fleet/process-frame", json={"vehicle_id": "VEH-DEL-PCR-01"})
+        if r1.status_code == 200 and r2.status_code == 200:
+            d1 = r1.json()
+            d2 = r2.json()
+            print("✅ Live fleet streaming & frame processing successful")
+            print(f"   Active Patrol Vehicles: {d1.get('total_active_patrol_vehicles')}")
+            print(f"   Frame Defect Inspection: {d2.get('defects_detected_count')} defects found on segment {d2.get('snapped_segment_id')}")
+            return True
+        else:
+            print(f"❌ Failed: r1 {r1.status_code}, r2 {r2.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_whatsapp_bot_reporting():
+    """Test 48: WhatsApp Bot & Citizen Instant Photo Reporting"""
+    print_section("Test 48: WhatsApp Bot Instant Reporting")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/whatsapp/simulate-report",
+            json={
+                "phone_number": "+919876543210",
+                "image_url": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg",
+                "latitude": 28.5450,
+                "longitude": 77.1250,
+                "user_notes": "Dangerous pothole near Mahipalpur junction"
+            }
+        )
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ WhatsApp Bot citizen photo report processed successfully")
+            print(f"   Report ID: #{data.get('report_id')}, Work Order: #{data.get('work_order_id')}")
+            print(f"   WhatsApp Reply Snippet: {data.get('whatsapp_reply_text')[:90]}...")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_contractor_sla_penalties():
+    """Test 49: Contractor SLA 72-Hour Penalty & Escrow Engine"""
+    print_section("Test 49: Contractor SLA Penalty Engine")
+    try:
+        r1 = requests.get(f"{BASE_URL}/api/v3/contractors/slas")
+        r2 = requests.post(f"{BASE_URL}/api/v3/contractors/penalize", json={"work_order_id": 304, "contractor_id": "CON-IND-01", "hours_elapsed": 96.0})
+        if r1.status_code == 200 and r2.status_code == 200:
+            d1 = r1.json()
+            d2 = r2.json()
+            print("✅ Contractor SLA compliance & automated penalty engine test successful")
+            print(f"   Contractors Registered: {d1.get('total_registered_contractors')}")
+            print(f"   SLA Penalty Evaluated: {d2.get('sla_status')} -> Penalty: ₹{d2.get('penalty_inr'):,.0f} INR ({d2.get('delay_hours')} hrs delay)")
+            return True
+        else:
+            print(f"❌ Failed: r1 {r1.status_code}, r2 {r2.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_satellite_radar_scans():
+    """Test 50: ISRO Bhuvan & Sentinel-2 Satellite Remote Sensing Radar"""
+    print_section("Test 50: Satellite Remote Sensing Radar")
+    try:
+        r1 = requests.get(f"{BASE_URL}/api/v3/satellite/radar-scans")
+        r2 = requests.post(f"{BASE_URL}/api/v3/satellite/scan-location", json={"latitude": 32.2396, "longitude": 77.1887, "corridor_name": "Leh-Manali Highway"})
+        if r1.status_code == 200 and r2.status_code == 200:
+            d1 = r1.json()
+            d2 = r2.json()
+            print("✅ Satellite remote sensing radar query successful")
+            print(f"   Monitored Highway Corridors: {d1.get('monitored_corridors_count')}")
+            print(f"   Radar Scan: {d2.get('moisture_alert')} (Sub-Surface Moisture: {d2.get('sub_surface_moisture_index')})")
+            return True
+        else:
+            print(f"❌ Failed: r1 {r1.status_code}, r2 {r2.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_emergency_smooth_routing():
+    """Test 51: Emergency Ambulance Smooth-Ride Hazard Avoidance Pathfinder"""
+    print_section("Test 51: Emergency Vehicle Smooth Pathfinder")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/v3/emergency/smooth-route",
+            json={
+                "origin_lat": 28.6139,
+                "origin_lng": 77.2090,
+                "dest_lat": 28.5450,
+                "dest_lng": 77.1250,
+                "vehicle_type": "CRITICAL_CARE_AMBULANCE"
+            }
+        )
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ Emergency ambulance smooth pathfinder test successful")
+            print(f"   Patient Comfort Index: {data.get('patient_comfort_index')}")
+            print(f"   Transit Time Saved: {data.get('time_saved_minutes')} mins")
+            print(f"   Bypassed Severe Hazards: {len(data.get('bypassed_critical_hazards', []))}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+def test_pm_gati_shakti_export():
+    """Test 52: PM Gati Shakti National Master Plan GeoJSON Export"""
+    print_section("Test 52: PM Gati Shakti GeoJSON Export")
+    try:
+        response = requests.get(f"{BASE_URL}/api/v3/gov/export/gati-shakti-geojson")
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ PM Gati Shakti GeoJSON export successful")
+            print(f"   Standard Schema: {data.get('standard')}")
+            print(f"   Features Exported: {data.get('total_features')}")
+            return True
+        else:
+            print(f"❌ Failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
 def run_all_tests():
     """Run all tests"""
     print("\n" + "="*60)
@@ -1115,6 +1249,13 @@ def run_all_tests():
     results.append(("IoT Telemetry Ingestion", test_gov_sensor_ingest()))
     results.append(("Before/After Repair Verification & Blockchain", test_gov_repair_verification()))
     results.append(("Government Hierarchy & National KPIs", test_gov_hierarchy_and_kpis()))
+    results.append(("Live Dashcam Fleet Streaming", test_live_fleet_streams()))
+    results.append(("WhatsApp Bot Citizen Reporting", test_whatsapp_bot_reporting()))
+    results.append(("Contractor SLA & Penalty Engine", test_contractor_sla_penalties()))
+    results.append(("Satellite Remote Sensing Radar", test_satellite_radar_scans()))
+    results.append(("Emergency Vehicle Smooth Pathfinder", test_emergency_smooth_routing()))
+    results.append(("PM Gati Shakti GeoJSON Export", test_pm_gati_shakti_export()))
+
 
 
     

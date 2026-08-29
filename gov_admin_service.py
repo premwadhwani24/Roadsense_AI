@@ -13,7 +13,7 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
-from gis_road_network import GISRoadNetworkEngine
+from database import DatabaseManager
 from pavement_scoring import PavementScoringEngine
 
 GOV_ROLES = {
@@ -31,13 +31,14 @@ class GovAdminService:
 
     @staticmethod
     def get_administrative_hierarchy() -> Dict[str, Any]:
-        """Returns structured pan-India administrative tree."""
+        """Returns structured pan-India administrative tree from SQLite database."""
         hierarchy: Dict[str, Dict[str, Dict[str, List[Dict[str, Any]]]]] = {}
+        segments = DatabaseManager.get_gov_segments()
 
-        for seg in GISRoadNetworkEngine.PAN_INDIA_REGISTRY:
-            state = seg["state"]
-            dist = seg["district"]
-            city = seg["city"]
+        for seg in segments:
+            state = seg.get("state", "Delhi")
+            dist = seg.get("district", "Central")
+            city = seg.get("city", "New Delhi")
 
             if state not in hierarchy:
                 hierarchy[state] = {}
@@ -49,10 +50,10 @@ class GovAdminService:
             hierarchy[state][dist][city].append({
                 "segment_id": seg["segment_id"],
                 "road_name": seg["road_name"],
-                "road_type": seg["road_type"],
-                "pincode": seg["pincode"],
-                "length_km": seg["length_km"],
-                "jurisdiction": seg["jurisdiction_agency"]
+                "road_type": seg.get("road_type", "Urban Arterial"),
+                "pincode": seg.get("pincode", "110001"),
+                "length_km": seg.get("length_km", 1.0),
+                "jurisdiction": seg.get("jurisdiction_agency", "PWD")
             })
 
         return {
@@ -63,34 +64,23 @@ class GovAdminService:
 
     @staticmethod
     def get_national_kpis() -> Dict[str, Any]:
-        """Calculates national road infrastructure performance indicators."""
-        total_segments = len(GISRoadNetworkEngine.PAN_INDIA_REGISTRY)
-        total_km = sum(s["length_km"] for s in GISRoadNetworkEngine.PAN_INDIA_REGISTRY)
+        """Calculates national road infrastructure performance indicators from dynamic DB records."""
+        segments = DatabaseManager.get_gov_segments()
+        total_segments = len(segments)
+        total_km = sum(s.get("length_km", 1.0) for s in segments)
 
-        # Baseline evaluation across pan-India registry
-        green_count = 0
-        yellow_count = 0
-        red_count = 0
-        uninspected_count = 0
+        green_count = sum(1 for s in segments if s.get("condition_status") == "GREEN")
+        yellow_count = sum(1 for s in segments if s.get("condition_status") == "YELLOW")
+        red_count = sum(1 for s in segments if s.get("condition_status") == "RED")
+        uninspected_count = sum(1 for s in segments if s.get("condition_status") in ["DATA_UNAVAILABLE", None])
 
-        # Sample baseline mapping
-        for s in GISRoadNetworkEngine.PAN_INDIA_REGISTRY:
-            s_id = s["segment_id"]
-            if "01" in s_id:
-                green_count += 1
-            elif "02" in s_id:
-                yellow_count += 1
-            elif "03" in s_id:
-                red_count += 1
-            else:
-                uninspected_count += 1
-
-        pct_green = round((green_count / total_segments) * 100, 1)
-        pct_yellow = round((yellow_count / total_segments) * 100, 1)
-        pct_red = round((red_count / total_segments) * 100, 1)
+        denom = max(1, total_segments)
+        pct_green = round((green_count / denom) * 100, 1)
+        pct_yellow = round((yellow_count / denom) * 100, 1)
+        pct_red = round((red_count / denom) * 100, 1)
 
         repair_backlog_inr = (yellow_count * 95000) + (red_count * 385000)
-        preventative_savings_inr = yellow_count * 145000 # Cost saved by fixing yellow before it becomes red
+        preventative_savings_inr = yellow_count * 145000
 
         return {
             "total_mapped_segments": total_segments,
