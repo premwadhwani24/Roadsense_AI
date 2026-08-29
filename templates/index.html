@@ -206,6 +206,39 @@
     <!-- Main Workspace Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
 
+        <!-- Phase 9 Enterprise Real-World Production Toolbar -->
+        <section class="bg-gradient-to-r from-slate-900 via-sky-900 to-indigo-950 p-4 rounded-2xl shadow-lg border border-sky-800/40 text-white">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-1 bg-sky-500/20 text-sky-300 border border-sky-400/30 rounded-lg text-xs font-mono font-bold">
+                        PHASE 9 LIVE DEPLOYMENT
+                    </span>
+                    <h3 class="text-sm font-bold text-slate-100">Enterprise Live Monitoring & Automated Action Controls</h3>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <button onclick="openLiveFleetModal()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <span class="live-pulse-dot"></span> 📱 Live Fleet Stream
+                    </button>
+                    <button onclick="openWhatsAppModal()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> 🤖 WhatsApp Bot
+                    </button>
+                    <button onclick="openContractorSLAModal()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-clock text-sm"></i> ⏱️ Contractor SLAs
+                    </button>
+                    <button onclick="openSatelliteModal()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-satellite text-sm"></i> 🛰️ Satellite Radar
+                    </button>
+                    <button onclick="openEmergencyPathModal()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-truck-medical text-sm"></i> 🚑 Smooth Pathfinder
+                    </button>
+                    <button onclick="exportGatiShaktiGeoJSON()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-400/30 rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-export text-sm"></i> 🏗️ PM Gati Shakti
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
         <!-- National Infrastructure Performance KPIs Banner -->
         <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
@@ -1311,5 +1344,139 @@ function simulateVehicleCameraIngest() {
             }
         }
     </script>
+
+    <!-- Live Fleet Stream Modal -->
+    <div id="liveFleetModal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden">
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center border-b border-slate-800">
+                <h3 class="font-bold flex items-center gap-2">
+                    <span class="live-pulse-dot"></span> 📱 Live Mobile & Dashcam WebRTC Stream Feed
+                </h3>
+                <button onclick="closeLiveFleetModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="bg-slate-900 text-white p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-rose-400 font-mono font-bold uppercase block">LIVE STREAM #01</span>
+                        <strong class="text-sm block">VEH-DEL-PCR-01</strong>
+                        <span class="text-[10px] text-slate-400 block">Delhi Police PCR Patrol Van</span>
+                        <span class="text-[10px] text-emerald-400 block font-mono mt-1">42.0 km/h • 15 FPS RTSP</span>
+                    </div>
+                    <div class="bg-slate-900 text-white p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-amber-400 font-mono font-bold uppercase block">LIVE STREAM #02</span>
+                        <strong class="text-sm block">VEH-MUM-BMC-04</strong>
+                        <span class="text-[10px] text-slate-400 block">BMC Sanitation Truck</span>
+                        <span class="text-[10px] text-emerald-400 block font-mono mt-1">28.0 km/h • 15 FPS RTSP</span>
+                    </div>
+                    <div class="bg-slate-900 text-white p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-sky-400 font-mono font-bold uppercase block">LIVE STREAM #03</span>
+                        <strong class="text-sm block">VEH-BLR-BMTC-12</strong>
+                        <span class="text-[10px] text-slate-400 block">BMTC City Bus</span>
+                        <span class="text-[10px] text-emerald-400 block font-mono mt-1">36.5 km/h • 15 FPS RTSP</span>
+                    </div>
+                </div>
+                <div class="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                    <button onclick="runFleetFrameExtraction()" class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> Trigger Real-Time Frame AI Scan (VEH-DEL-PCR-01)
+                    </button>
+                    <div id="fleetStreamResult" class="mt-3 p-3 bg-white rounded-lg border border-slate-200 hidden font-mono text-[11px]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Bot Simulator Modal -->
+    <div id="whatsappModal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden">
+            <div class="bg-emerald-700 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> 🤖 WhatsApp Citizen Instant Reporting Engine
+                </h3>
+                <button onclick="closeWhatsAppModal()" class="text-white/80 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 text-xs">
+                <p class="text-slate-600">Simulate a WhatsApp message sent by a citizen with photo attachment and location:</p>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Citizen Phone Number</label>
+                    <input id="waPhone" type="text" value="+919876543210" class="w-full px-3 py-2 border rounded-xl font-mono text-xs">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Pothole Photo URL</label>
+                    <input id="waPhoto" type="text" value="/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" class="w-full px-3 py-2 border rounded-xl font-mono text-xs">
+                </div>
+                <button onclick="sendWhatsAppReport()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Send WhatsApp Citizen Report & Process AI
+                </button>
+                <div id="waResultText" class="p-3 bg-emerald-50 text-emerald-950 rounded-xl border border-emerald-200 hidden font-mono text-[11px] whitespace-pre-wrap"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Handlers for Phase 9 Modals -->
+    <script>
+        function openLiveFleetModal() { document.getElementById('liveFleetModal').classList.remove('hidden'); }
+        function closeLiveFleetModal() { document.getElementById('liveFleetModal').classList.add('hidden'); }
+
+        function openWhatsAppModal() { document.getElementById('whatsappModal').classList.remove('hidden'); }
+        function closeWhatsAppModal() { document.getElementById('whatsappModal').classList.add('hidden'); }
+
+        async function runFleetFrameExtraction() {
+            const resBox = document.getElementById('fleetStreamResult');
+            resBox.classList.remove('hidden');
+            resBox.innerHTML = '⌛ Processing WebRTC live stream frame with YOLO computer vision...';
+            try {
+                const res = await fetch('/api/v3/fleet/process-frame', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({vehicle_id: 'VEH-DEL-PCR-01'})
+                });
+                const data = await res.json();
+                resBox.innerHTML = `✅ FRAME SCANNED: ${data.defects_detected_count} Defects Found!
+Snapped Segment: ${data.snapped_segment_id}
+Coordinates: (${data.coordinates.latitude}, ${data.coordinates.longitude})`;
+            } catch(e) {
+                resBox.innerHTML = '❌ Frame processing error: ' + e;
+            }
+        }
+
+        async function sendWhatsAppReport() {
+            const resBox = document.getElementById('waResultText');
+            resBox.classList.remove('hidden');
+            resBox.innerHTML = '⌛ AI analyzing citizen photo via WhatsApp webhook...';
+            try {
+                const res = await fetch('/api/v3/whatsapp/simulate-report', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        phone_number: document.getElementById('waPhone').value,
+                        image_url: document.getElementById('waPhoto').value,
+                        latitude: 28.5450,
+                        longitude: 77.1250
+                    })
+                });
+                const data = await res.json();
+                resBox.innerText = data.whatsapp_reply_text;
+            } catch(e) {
+                resBox.innerText = '❌ Error sending report: ' + e;
+            }
+        }
+
+        async function exportGatiShaktiGeoJSON() {
+            window.open('/api/v3/gov/export/gati-shakti-geojson', '_blank');
+        }
+
+        function openContractorSLAModal() {
+            alert('Contractor SLA & Escrow Penalty Engine Active! View 72-hour IRC:SP:84 compliance in Operations Dashboard.');
+        }
+
+        function openSatelliteModal() {
+            alert('ISRO Bhuvan & Sentinel-2 Satellite Remote Sensing Moisture Radar active! Scanning high-altitude highway corridors.');
+        }
+
+        function openEmergencyPathModal() {
+            alert('Ambulance & Fire Emergency Smooth Pathfinder Active! Filtering out pothole shockwaves (>2.8g).');
+        }
+    </script>
+
 </body>
 </html>
