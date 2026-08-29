@@ -37,6 +37,22 @@ except Exception as e:
     print(f"Could not initialize RoadVisionService: {e}")
 
 try:
+    from video_analyzer_service import VideoAnalyzerService
+    video_analyzer_service = VideoAnalyzerService(vision_service=vision_service)
+    print("VideoAnalyzerService initialized successfully.")
+except Exception as e:
+    video_analyzer_service = None
+    print(f"Could not initialize VideoAnalyzerService: {e}")
+
+try:
+    from dossier_engine import GovernmentDossierEngine
+    dossier_engine = GovernmentDossierEngine()
+    print("GovernmentDossierEngine initialized successfully.")
+except Exception as e:
+    dossier_engine = None
+    print(f"Could not initialize GovernmentDossierEngine: {e}")
+
+try:
     import pandas as pd
 except:
     pd = None
@@ -2041,7 +2057,30 @@ def gov_camera_upload_inspect():
             new_health = 88.0  # GREEN zone
 
         defects = []
-        if label != "Normal":
+        bboxes = ai_prediction.get("bounding_boxes", [])
+        if bboxes:
+            for b in bboxes:
+                defects.append({
+                    "defect_id": f"AI-{int(time.time())}-{random.randint(1000, 9999)}",
+                    "class_code": "D40" if "Pothole" in b.get("label", "") else "D00",
+                    "class_name": b.get("label", label),
+                    "severity": b.get("severity", severity),
+                    "confidence": round(b.get("confidence", confidence) / 100.0, 2),
+                    "latitude": lat,
+                    "longitude": lng,
+                    "recommendation": recommendation,
+                    "measurements": b.get("measurements", {}),
+                    "irc_grade": b.get("irc_grade", ""),
+                    "irc_standard": b.get("irc_standard", ""),
+                    "repair_specification": b.get("repair_specification", ""),
+                    "bbox": {
+                        "norm_x": b.get("norm_x"),
+                        "norm_y": b.get("norm_y"),
+                        "norm_width": b.get("norm_width"),
+                        "norm_height": b.get("norm_height")
+                    }
+                })
+        elif label != "Normal":
             defects.append({
                 "defect_id": f"AI-{int(time.time())}-{random.randint(1000, 9999)}",
                 "class_code": "D40" if label == "Pothole" else "D00",
@@ -2516,6 +2555,133 @@ def export_gati_shakti_geojson():
     }
 
     return jsonify(geojson_data), 200
+
+
+# ====================================================================================
+# DASHCAM VIDEO CLIP ANALYZER ENDPOINTS
+# ====================================================================================
+
+@app.route("/api/v3/video/upload-analyze", methods=["POST"])
+def video_upload_analyze():
+    """
+    Accepts dashcam patrol video upload (MP4/AVI/WebM), extracts frames at regular intervals,
+    executes batch neural inference with RoadVisionService, and returns synchronized temporal timeline.
+    """
+    if not video_analyzer_service:
+        return jsonify({"error": "Video analyzer service is not available."}), 503
+
+    try:
+        sample_interval = float(request.form.get("sampling_interval", 1.5))
+        start_lat = float(request.form.get("start_latitude", 28.5450))
+        start_lng = float(request.form.get("start_longitude", 77.1250))
+        
+        if 'file' in request.files and request.files['file'].filename:
+            file = request.files['file']
+            filename = f"video_{int(time.time())}_{random.randint(100, 999)}_{file.filename}"
+            upload_dir = os.path.join("static", "assets", "uploads", "videos")
+            os.makedirs(upload_dir, exist_ok=True)
+            save_path = os.path.join(upload_dir, filename)
+            file.save(save_path)
+            
+            result = video_analyzer_service.analyze_video_file(
+                video_path=save_path,
+                sample_interval_sec=sample_interval,
+                start_lat=start_lat,
+                start_lng=start_lng
+            )
+            result["video_url"] = f"/static/assets/uploads/videos/{filename}"
+            return jsonify(result), 200
+        else:
+            # Fallback to simulated sample video stream
+            result = video_analyzer_service.generate_synthetic_dashcam_patrol(
+                duration_seconds=20.0,
+                sample_interval_sec=sample_interval,
+                start_lat=start_lat,
+                start_lng=start_lng
+            )
+            return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error in video analysis: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/v3/video/sample-stream", methods=["POST"])
+def video_sample_stream():
+    """
+    Executes instant demonstration of dashcam video temporal analyzer using local test footage.
+    """
+    if not video_analyzer_service:
+        return jsonify({"error": "Video analyzer service is not available."}), 503
+
+    data = request.get_json(silent=True) or {}
+    duration = float(data.get("duration_seconds", 20.0))
+    interval = float(data.get("sample_interval_sec", 1.5))
+    lat = float(data.get("start_latitude", 28.5450))
+    lng = float(data.get("start_longitude", 77.1250))
+
+    result = video_analyzer_service.generate_synthetic_dashcam_patrol(
+        duration_seconds=duration,
+        sample_interval_sec=interval,
+        start_lat=lat,
+        start_lng=lng
+    )
+    return jsonify(result), 200
+
+
+# ====================================================================================
+# GOVERNMENT AUDIT DOSSIER & PM GATI SHAKTI EXPORT ENDPOINTS
+# ====================================================================================
+
+@app.route("/api/v3/gov/dossier/<segment_id>", methods=["GET"])
+def get_gov_dossier(segment_id):
+    """
+    Returns full MoRTH/NHAI technical audit dossier data for the specified road corridor segment.
+    """
+    if not dossier_engine:
+        return jsonify({"error": "Dossier engine is not available."}), 503
+
+    try:
+        dossier = dossier_engine.generate_corridor_dossier(segment_id)
+        return jsonify({
+            "status": "success",
+            "dossier": dossier
+        }), 200
+    except Exception as e:
+        logger.error(f"Error generating dossier: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/gov/dossier/print/<segment_id>", methods=["GET"])
+def print_gov_dossier(segment_id):
+    """
+    Renders high-fidelity printable A4 official Government Pavement Audit Dossier.
+    """
+    if not dossier_engine:
+        return "Dossier engine not available", 503
+
+    try:
+        dossier = dossier_engine.generate_corridor_dossier(segment_id)
+        return render_template("dossier_print.html", dossier=dossier)
+    except Exception as e:
+        logger.error(f"Error rendering print dossier: {e}")
+        return f"Error: {e}", 500
+
+
+@app.route("/api/v3/gov/dossier/export-geojson/<segment_id>", methods=["GET"])
+def export_gov_dossier_geojson(segment_id):
+    """
+    Exports PM Gati Shakti NMP standard GeoJSON FeatureCollection for a specific road corridor.
+    """
+    if not dossier_engine:
+        return jsonify({"error": "Dossier engine not available."}), 503
+
+    try:
+        geojson = dossier_engine.generate_pm_gati_shakti_geojson(segment_id)
+        return jsonify(geojson), 200
+    except Exception as e:
+        logger.error(f"Error exporting GeoJSON: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     logger.info("Starting RoadSense Enhanced Backend")

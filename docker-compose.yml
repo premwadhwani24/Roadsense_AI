@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  roadsense-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: roadsense-ai-app
+    restart: always
+    environment:
+      - FLASK_ENV=production
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-roadsense-production-secret-key-2024}
+      - ROAD_DEFECT_MODEL_PATH=road_defect_cnn.pt
+      - PORT=5000
+    volumes:
+      - roadsense-data:/app/data
+      - roadsense-uploads:/app/static/assets/uploads
+      - roadsense-logs:/app/logs
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - roadsense-net
+
+  roadsense-nginx:
+    image: nginx:1.25-alpine
+    container_name: roadsense-nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - roadsense-uploads:/app/static/assets/uploads:ro
+    depends_on:
+      roadsense-web:
+        condition: service_healthy
+    networks:
+      - roadsense-net
+
+volumes:
+  roadsense-data:
+    driver: local
+  roadsense-uploads:
+    driver: local
+  roadsense-logs:
+    driver: local
+
+networks:
+  roadsense-net:
+    driver: bridge

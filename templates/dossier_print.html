@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoRTH Official Audit Dossier - {{ dossier.corridor_profile.corridor_name }}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 11pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+            .print-shadow-none {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+        }
+        @page {
+            size: A4 portrait;
+            margin: 1.2cm;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen py-8 px-4 sm:px-6">
+
+    <!-- Action Toolbar (Hidden during print) -->
+    <div class="max-w-4xl mx-auto mb-6 flex items-center justify-between no-print bg-slate-900 text-white p-4 rounded-xl shadow-lg border border-slate-800">
+        <div class="flex items-center space-x-3">
+            <a href="/" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition flex items-center space-x-1">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+            <span class="text-xs text-slate-400 border-l border-slate-700 pl-3">PM Gati Shakti National Master Plan Compliance Layer</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="/api/v3/gov/dossier/export-geojson/{{ dossier.corridor_profile.segment_id }}" target="_blank" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
+                <i class="fas fa-file-code"></i>
+                <span>Export GeoJSON</span>
+            </a>
+            <button onclick="window.print()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-md">
+                <i class="fas fa-print"></i>
+                <span>Print / Save as PDF</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Official Document Sheet -->
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-xl p-8 sm:p-12 border border-slate-200 print-shadow-none">
+        
+        <!-- Header & State Emblem Branding -->
+        <div class="border-b-2 border-slate-900 pb-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-16 h-16 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-amber-700 text-2xl shadow-inner">
+                        <i class="fas fa-landmark"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Government of India</h3>
+                        <h1 class="text-xl font-black text-slate-900 tracking-tight">Ministry of Road Transport and Highways (MoRTH)</h1>
+                        <p class="text-xs font-semibold text-slate-600">National Highways Authority of India (NHAI) • PM Gati Shakti NMP Division</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="inline-block px-3 py-1 bg-slate-900 text-amber-400 font-mono text-xs font-bold rounded">
+                        CONFIDENTIAL AUDIT
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1 font-mono">Dossier: {{ dossier.dossier_id }}</div>
+                    <div class="text-[10px] text-slate-500 font-mono">Date: {{ dossier.generated_at }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Title -->
+        <div class="text-center my-6">
+            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Technical Pavement Audit & SLA Dossier</h2>
+            <p class="text-xs text-slate-600 mt-1">Conducted per Indian Road Congress Standards (IRC:SP:84-2019 & IRC:SP:16-2019)</p>
+        </div>
+
+        <!-- Section 1: Corridor Profile -->
+        <div class="mb-8">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center">
+                <i class="fas fa-road mr-2 text-indigo-600"></i>
+                <span>1. Highway Corridor Specification</span>
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs">
+                <div>
+                    <span class="text-slate-500 block">Corridor Name</span>
+                    <strong class="text-slate-900">{{ dossier.corridor_profile.corridor_name }}</strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Segment ID</span>
+                    <strong class="text-slate-900 font-mono">{{ dossier.corridor_profile.segment_id }}</strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Chainage Extent</span>
+                    <strong class="text-slate-900">{{ dossier.corridor_profile.chainage_start_km }} to {{ dossier.corridor_profile.chainage_end_km }}</strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Carriageway Configuration</span>
+                    <strong class="text-slate-900">{{ dossier.corridor_profile.carriageway_type }}</strong>
+                </div>
+                <div class="sm:col-span-2">
+                    <span class="text-slate-500 block">GPS Coordinates (Center Datum)</span>
+                    <strong class="text-slate-900 font-mono">{{ dossier.corridor_profile.center_latitude }}, {{ dossier.corridor_profile.center_longitude }}</strong>
+                </div>
+                <div class="sm:col-span-2">
+                    <span class="text-slate-500 block">Jurisdiction Authority</span>
+                    <strong class="text-slate-900">{{ dossier.corridor_profile.jurisdiction_authority }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Pavement Health & Dynamic Zoning -->
+        <div class="mb-8">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center">
+                <i class="fas fa-heart-pulse mr-2 text-rose-600"></i>
+                <span>2. AI Pavement Health Index & Dynamic Zone</span>
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl border-2 {% if dossier.pavement_health_index.zone == 'RED' %}border-rose-500 bg-rose-50/50{% elif dossier.pavement_health_index.zone == 'YELLOW' %}border-amber-500 bg-amber-50/50{% else %}border-emerald-500 bg-emerald-50/50{% endif %}">
+                    <span class="text-xs font-bold uppercase text-slate-500">Condition Score</span>
+                    <div class="flex items-baseline space-x-2 mt-1">
+                        <span class="text-3xl font-black {% if dossier.pavement_health_index.zone == 'RED' %}text-rose-600{% elif dossier.pavement_health_index.zone == 'YELLOW' %}text-amber-600{% else %}text-emerald-600{% endif %}">
+                            {{ dossier.pavement_health_index.condition_score }}
+                        </span>
+                        <span class="text-xs text-slate-500">/ 100.0</span>
+                    </div>
+                    <div class="mt-2 text-xs font-extrabold uppercase {% if dossier.pavement_health_index.zone == 'RED' %}text-rose-700{% elif dossier.pavement_health_index.zone == 'YELLOW' %}text-amber-700{% else %}text-emerald-700{% endif %}">
+                        {{ dossier.pavement_health_index.zone }} ZONE • {{ dossier.pavement_health_index.classification_label }}
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                    <span class="text-xs font-bold uppercase text-slate-500">International Roughness Index (IRI)</span>
+                    <div class="flex items-baseline space-x-2 mt-1">
+                        <span class="text-3xl font-black text-slate-800">{{ dossier.pavement_health_index.estimated_iri_m_per_km }}</span>
+                        <span class="text-xs text-slate-500">m / km</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-2">IRC:SP:84 allowable max: 2.5 m/km</p>
+                </div>
+
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                    <span class="text-xs font-bold uppercase text-slate-500">Defect Inventory</span>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div class="bg-white p-2 rounded border border-slate-200">
+                            <span class="text-[10px] text-slate-500 block">Potholes</span>
+                            <span class="text-lg font-black text-rose-600">{{ dossier.defect_inventory.potholes }}</span>
+                        </div>
+                        <div class="bg-white p-2 rounded border border-slate-200">
+                            <span class="text-[10px] text-slate-500 block">Cracks</span>
+                            <span class="text-lg font-black text-amber-600">{{ dossier.defect_inventory.cracks }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Contractor SLA Compliance Audit -->
+        <div class="mb-8">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center">
+                <i class="fas fa-file-contract mr-2 text-purple-600"></i>
+                <span>3. Concessionaire SLA Compliance & Penalty Deductions</span>
+            </h4>
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-3 border-b border-slate-200">
+                    <div>
+                        <span class="text-slate-500 block">Concessionaire / Contractor</span>
+                        <strong class="text-slate-900">{{ dossier.contractor_sla_audit.concessionaire_name }}</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">Contract Package</span>
+                        <strong class="text-slate-900 font-mono">{{ dossier.contractor_sla_audit.contract_code }}</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">Defect Liability Period</span>
+                        <strong class="text-slate-900">{{ dossier.contractor_sla_audit.elapsed_months }} of {{ dossier.contractor_sla_audit.warranty_period_months }} Months</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">SLA Rectification Window</span>
+                        <strong class="text-slate-900">{{ dossier.contractor_sla_audit.sla_rectification_window_hours }} Hours Max</strong>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-3">
+                    <div>
+                        <span class="text-slate-500">Contractor Compliance Status: </span>
+                        <strong class="{% if dossier.contractor_sla_audit.contractor_compliance_status == 'COMPLIANT' %}text-emerald-700{% else %}text-rose-700{% endif %} font-black">
+                            {{ dossier.contractor_sla_audit.contractor_compliance_status }}
+                        </strong>
+                        <span class="text-[10px] text-slate-500 block">{{ dossier.contractor_sla_audit.governing_clause }}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-slate-500 block">Liquidated Penalty Assessment:</span>
+                        <strong class="text-base font-black text-rose-600">₹ {{ "{:,}".format(dossier.contractor_sla_audit.calculated_penalty_inr) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Bill of Quantities (BOQ) -->
+        <div class="mb-8">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center">
+                <i class="fas fa-calculator mr-2 text-emerald-600"></i>
+                <span>4. MoRTH Bill of Quantities (BOQ) & Estimated Repair Budget</span>
+            </h4>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                        <tr>
+                            <th class="p-2.5">Item Code</th>
+                            <th class="p-2.5">Description (MoRTH Specifications)</th>
+                            <th class="p-2.5 text-center">Qty</th>
+                            <th class="p-2.5 text-center">Unit</th>
+                            <th class="p-2.5 text-right">Rate (₹)</th>
+                            <th class="p-2.5 text-right">Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 text-slate-700">
+                        {% for item in dossier.bill_of_quantities_boq.line_items %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-2.5 font-mono font-bold text-indigo-700">{{ item.item_code }}</td>
+                            <td class="p-2.5">{{ item.description }}</td>
+                            <td class="p-2.5 text-center font-mono">{{ item.quantity }}</td>
+                            <td class="p-2.5 text-center">{{ item.unit }}</td>
+                            <td class="p-2.5 text-right font-mono">₹ {{ "{:,.2f}".format(item.unit_rate_inr) }}</td>
+                            <td class="p-2.5 text-right font-mono font-semibold">₹ {{ "{:,.2f}".format(item.total_cost_inr) }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="bg-slate-50 font-bold text-slate-900 text-sm">
+                            <td colspan="5" class="p-3 text-right uppercase tracking-wider">Total Estimated Repair Budget:</td>
+                            <td class="p-3 text-right font-mono text-emerald-700 font-black">₹ {{ "{:,.2f}".format(dossier.bill_of_quantities_boq.total_estimated_budget_inr) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-right text-xs text-slate-500 mt-1">
+                Total in Lakhs: <strong>₹ {{ dossier.bill_of_quantities_boq.total_budget_lakhs_inr }} Lakhs</strong> (Calculated via {{ dossier.bill_of_quantities_boq.schedule_of_rates }})
+            </div>
+        </div>
+
+        <!-- Section 5: Cryptographic Audit Provenance -->
+        <div class="border-t-2 border-slate-900 pt-6 mt-8">
+            <div class="flex items-center justify-between text-[10px] text-slate-500">
+                <div>
+                    <span class="font-bold text-slate-700 block">SHA-256 Cryptographic Audit Provenance Hash:</span>
+                    <span class="font-mono text-slate-900 break-all">{{ dossier.provenance_hash }}</span>
+                </div>
+                <div class="text-right flex-shrink-0 ml-4">
+                    <span class="inline-block px-2 py-1 bg-emerald-100 text-emerald-800 rounded font-bold">
+                        <i class="fas fa-shield-check mr-1"></i> Blockchain Verified
+                    </span>
+                </div>
+            </div>
+            <div class="text-center text-[10px] text-slate-400 mt-6">
+                Generated by RoadSense AI Infrastructure Platform • PM Gati Shakti National Master Plan Data Connector • MoRTH Certified
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

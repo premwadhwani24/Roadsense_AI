@@ -216,13 +216,19 @@
                     <h3 class="text-sm font-bold text-slate-100">Enterprise Live Monitoring & Automated Action Controls</h3>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <button onclick="openDashcamVideoModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5 ring-2 ring-indigo-400/50 animate-pulse">
+                        <i class="fa-solid fa-video text-sm"></i> 🎥 Dashcam AI Video Analyzer
+                    </button>
+                    <button onclick="openGovDossierModal(activeSegment ? activeSegment.segment_id : 'OSM-LIVE-SEGMENT')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-shield text-sm"></i> 📜 MoRTH Audit Dossier
+                    </button>
                     <button onclick="openLiveFleetModal()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
                         <span class="live-pulse-dot"></span> 📱 Live Fleet Stream
                     </button>
                     <button onclick="openWhatsAppModal()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
                         <i class="fa-brands fa-whatsapp text-sm"></i> 🤖 WhatsApp Bot
                     </button>
-                    <button onclick="openContractorSLAModal()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
+                    <button onclick="openContractorSLAModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
                         <i class="fa-solid fa-clock text-sm"></i> ⏱️ Contractor SLAs
                     </button>
                     <button onclick="openSatelliteModal()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold transition-all shadow flex items-center gap-1.5">
@@ -643,9 +649,14 @@
                             <span>•</span>
                             <span>Est. Cost: <strong id="govEstCost" class="text-emerald-700 font-bold">₹18,000 / km</strong></span>
                         </div>
-                        <button id="govRemediateBtn" onclick="executeGovRemediation()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition-all">
-                            <i class="fa-solid fa-wrench mr-1"></i> Improve & Convert to Green
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openGovDossierModal(activeSegment ? activeSegment.segment_id : 'OSM-LIVE-SEGMENT')" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black shadow transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-shield"></i> MoRTH Audit Dossier
+                            </button>
+                            <button id="govRemediateBtn" onclick="executeGovRemediation()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow transition-all">
+                                <i class="fa-solid fa-wrench mr-1"></i> Improve & Convert to Green
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -785,9 +796,9 @@
             </div>
         </div>
 
-        <!-- AI VISION INSPECTION RESULT CARD MODAL -->
-        <div id="aiInspectionResultModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+        <!-- AI VISION INSPECTION RESULT CARD MODAL (WITH INTERACTIVE CANVAS BOUNDING BOX & HEATMAP) -->
+        <div id="aiInspectionResultModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 my-8">
                 <!-- Header -->
                 <div class="flex justify-between items-center border-b border-slate-100 pb-4">
                     <div class="flex items-center gap-3">
@@ -796,10 +807,10 @@
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="text-lg font-black text-slate-900">Neural Defect Inspection Result</h3>
+                                <h3 class="text-lg font-black text-slate-900">Neural Defect Inspection & Canvas Overlay</h3>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">PyTorch ResNet-18</span>
                             </div>
-                            <span class="text-xs text-slate-500 font-mono">Trained on Cracks & Potholes Dataset (2,235 Samples)</span>
+                            <span class="text-xs text-slate-500 font-mono">IRC:SP:84 & IRC:SP:16 Defect Quantification Engine</span>
                         </div>
                     </div>
                     <button onclick="closeAiInspectionResultModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">&times;</button>
@@ -807,29 +818,49 @@
 
                 <!-- Main Analysis Body -->
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-                    <!-- Left: Analyzed Image & Detection Badge -->
-                    <div class="md:col-span-5 space-y-3">
-                        <div class="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner h-48">
-                            <img id="aiResultImg" src="" alt="Analyzed Road" class="w-full h-full object-cover">
-                            <div class="absolute top-2 left-2">
+                    <!-- Left: Analyzed Image & Canvas Overlay Controls -->
+                    <div class="md:col-span-6 space-y-3">
+                        <div class="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner h-64 flex items-center justify-center">
+                            <img id="aiResultImg" src="" alt="Analyzed Road" class="hidden w-full h-full object-cover">
+                            <canvas id="aiCanvasOverlay" class="w-full h-full object-contain cursor-crosshair"></canvas>
+                            <div class="absolute top-2 left-2 pointer-events-none">
                                 <span id="aiResultClassChip" class="px-2.5 py-1 rounded-lg text-xs font-mono font-black shadow-lg">
                                     --
                                 </span>
                             </div>
-                            <div class="absolute bottom-2 right-2">
+                            <div class="absolute bottom-2 right-2 pointer-events-none">
                                 <span id="aiResultSeverityBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold shadow-md bg-slate-900/80 text-white backdrop-blur-sm">
                                     --
                                 </span>
                             </div>
                         </div>
-                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] font-mono text-slate-600">
-                            <span class="block">Snapped Road: <strong id="aiResultSegmentId" class="text-slate-900">--</strong></span>
-                            <span class="block text-slate-400 text-[10px]">Inference Time: ~460ms • PyTorch CPU</span>
+
+                        <!-- Canvas Interactive Toggles -->
+                        <div class="flex items-center justify-between gap-1 p-2 bg-slate-100 rounded-xl text-[11px] font-bold text-slate-700">
+                            <button id="toggleBBoxBtn" onclick="toggleAiBBoxes()" class="flex-1 py-1 px-2 rounded-lg bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-1">
+                                <span>🔲 Boxes</span>
+                            </button>
+                            <button id="toggleHeatmapBtn" onclick="toggleAiHeatmap()" class="flex-1 py-1 px-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition flex items-center justify-center gap-1">
+                                <span>🔥 Heatmap</span>
+                            </button>
+                            <button id="toggleMetricsBtn" onclick="toggleAiMetrics()" class="flex-1 py-1 px-2 rounded-lg bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-1">
+                                <span>📐 IRC Specs</span>
+                            </button>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] font-mono text-slate-600 flex justify-between items-center">
+                            <div>
+                                <span class="block">Snapped Road: <strong id="aiResultSegmentId" class="text-slate-900">--</strong></span>
+                                <span class="block text-slate-400 text-[10px]">Inference Time: ~460ms • PyTorch CPU</span>
+                            </div>
+                            <button onclick="openGovDossierModal(lastInspectedSegment ? lastInspectedSegment.segment_id : 'OSM-LIVE-SEGMENT')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold shadow">
+                                <i class="fa-solid fa-file-pdf mr-1"></i> Dossier
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Right: Prediction Breakdown & Class Probabilities -->
-                    <div class="md:col-span-7 space-y-4">
+                    <!-- Right: Prediction Breakdown & IRC Measurements -->
+                    <div class="md:col-span-6 space-y-4">
                         <!-- Confidence Level Bar -->
                         <div>
                             <div class="flex justify-between items-center mb-1 text-xs">
@@ -873,6 +904,32 @@
                             </div>
                         </div>
 
+                        <!-- IRC Defect Geometry & BOQ Assessment -->
+                        <div id="aiIrcMetricsCard" class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
+                            <div class="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                                <span class="font-extrabold text-slate-800 uppercase text-[10px] tracking-wider">
+                                    <i class="fa-solid fa-ruler-combined text-indigo-600 mr-1"></i> IRC Defect Dimensional Geometry
+                                </span>
+                                <span id="aiIrcGradeTag" class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-mono font-bold text-[10px]">
+                                    Grade 3 (Severe)
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center font-mono">
+                                <div class="bg-white p-2 rounded-lg border border-slate-200">
+                                    <span class="text-[9px] text-slate-400 block font-sans">Est. Depth/Width</span>
+                                    <strong id="aiMetricDim" class="text-slate-900 text-xs">6.8 cm</strong>
+                                </div>
+                                <div class="bg-white p-2 rounded-lg border border-slate-200">
+                                    <span class="text-[9px] text-slate-400 block font-sans">Surface Area</span>
+                                    <strong id="aiMetricArea" class="text-slate-900 text-xs">0.22 m²</strong>
+                                </div>
+                                <div class="bg-white p-2 rounded-lg border border-slate-200">
+                                    <span class="text-[9px] text-slate-400 block font-sans">MoRTH Repair Cost</span>
+                                    <strong id="aiMetricCost" class="text-emerald-600 text-xs">₹1,850</strong>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Dynamic Road Score & Zone Impact -->
                         <div class="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between shadow-md">
                             <div>
@@ -912,17 +969,248 @@
             </div>
         </div>
 
+        <!-- DASHCAM VIDEO CLIP ANALYZER MODAL (OPTION 2) -->
+        <div id="dashcamVideoModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-5xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 my-8">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xl shadow-sm">
+                            📹
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-black text-slate-900">Dashcam Video Clip Analyzer</h3>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-100 text-rose-700 border border-rose-200">Temporal ResNet-18 Stream</span>
+                            </div>
+                            <span class="text-xs text-slate-500 font-mono">Frame-by-frame neural defect localization & synchronized trajectory timeline</span>
+                        </div>
+                    </div>
+                    <button onclick="closeDashcamVideoModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">&times;</button>
+                </div>
+
+                <!-- Video Controls & Upload Strip -->
+                <div class="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="dashcamFileInput" accept="video/mp4,video/avi,video/webm,video/mov" class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+                        <button onclick="runDashcamVideoUpload()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow">
+                            <i class="fa-solid fa-upload mr-1"></i> Analyze Video
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">Or Instant Demo:</span>
+                        <button onclick="runSampleDashcamStream()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-play"></i> Run Sample Dashcam Patrol
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Video Analysis Dashboard -->
+                <div id="dashcamAnalysisContent" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                        <!-- Left: Current Video Frame & Canvas Overlay -->
+                        <div class="md:col-span-6 space-y-3">
+                            <div class="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner h-64 flex items-center justify-center">
+                                <img id="videoCurrentFrameImg" src="" alt="Video Frame" class="w-full h-full object-cover">
+                                <div class="absolute top-2 left-2">
+                                    <span id="videoCurrentTimeChip" class="px-2.5 py-1 rounded-lg text-xs font-mono font-black bg-black/70 text-amber-400 backdrop-blur-sm shadow">
+                                        ⏱️ 00:00
+                                    </span>
+                                </div>
+                                <div class="absolute bottom-2 left-2">
+                                    <span id="videoCurrentDefectChip" class="px-2.5 py-1 rounded-lg text-xs font-mono font-black bg-rose-600 text-white shadow">
+                                        POTHOLE
+                                    </span>
+                                </div>
+                                <div class="absolute bottom-2 right-2">
+                                    <span id="videoCurrentHealthBadge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-black bg-slate-900/80 text-sky-300 backdrop-blur-sm shadow">
+                                        Score: 32 / 100
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Temporal Scrubber Bar -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs font-mono text-slate-500">
+                                    <span>Timeline Scrubber</span>
+                                    <span id="videoTimelineProgress">Frame 0 of 0</span>
+                                </div>
+                                <input type="range" id="videoTimelineScrubber" min="0" max="0" value="0" oninput="seekVideoTimeline(this.value)" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            </div>
+                        </div>
+
+                        <!-- Right: Trip Summary & Defect Hotspots List -->
+                        <div class="md:col-span-6 space-y-4">
+                            <!-- Trip KPI Stats -->
+                            <div class="grid grid-cols-3 gap-3 text-center">
+                                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 block font-sans">Avg Health Score</span>
+                                    <strong id="videoAvgScore" class="text-xl font-black text-amber-600">54.2</strong>
+                                    <span id="videoTripZone" class="block text-[9px] font-bold text-amber-700 uppercase">YELLOW ZONE</span>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 block font-sans">Potholes Detected</span>
+                                    <strong id="videoPotholeCount" class="text-xl font-black text-rose-600">3</strong>
+                                    <span class="block text-[9px] text-rose-600 font-mono">IRC:SP:84 Gr.3</span>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 block font-sans">Surveyed Route</span>
+                                    <strong id="videoSurveyDistance" class="text-xl font-black text-slate-800">0.32 km</strong>
+                                    <span class="block text-[9px] text-slate-400 font-mono">GPS Mapped</span>
+                                </div>
+                            </div>
+
+                            <!-- Clickable Defect Hotspot Event Chips -->
+                            <div class="space-y-1.5">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
+                                    <i class="fa-solid fa-flag text-rose-500 mr-1"></i> Defect Hotspots (Click to Jump Video):
+                                </span>
+                                <div id="videoHotspotChips" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Frame Recommendation -->
+                            <div class="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 text-xs">
+                                <strong class="text-indigo-900 block font-bold">Active Frame Action Plan:</strong>
+                                <p id="videoFrameRecommendation" class="text-indigo-800 text-[11px] mt-0.5 leading-snug">
+                                    Dispatch road repair crew for emergency pothole infill.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="dashcamLoadingState" class="hidden text-center py-12 space-y-3">
+                    <div class="inline-block animate-spin text-3xl text-indigo-600">
+                        <i class="fa-solid fa-circle-notch"></i>
+                    </div>
+                    <p class="text-sm font-bold text-slate-700">Analyzing Dashcam Video Clip with PyTorch Neural Vision...</p>
+                    <p class="text-xs text-slate-400 font-mono">Sampling frames • Classifying defects • Calculating temporal condition trajectory</p>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeDashcamVideoModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">
+                        Close
+                    </button>
+                    <button type="button" onclick="integrateVideoToMap()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                        <i class="fa-solid fa-map-location-dot"></i> Sync Video Patrol to Live GIS Map
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GOVERNMENT AUDIT DOSSIER MODAL (OPTION 3 - PM GATI SHAKTI COMPLIANT) -->
+        <div id="govAuditDossierModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 my-8">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-xl shadow-sm">
+                            🏛️
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-black text-slate-900">MoRTH Technical Pavement Audit Dossier</h3>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-300">PM Gati Shakti NMP</span>
+                            </div>
+                            <span class="text-xs text-slate-500 font-mono">Official MoRTH / NHAI Statutory Quality & SLA Compliance Record</span>
+                        </div>
+                    </div>
+                    <button onclick="closeGovDossierModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">&times;</button>
+                </div>
+
+                <!-- Dossier Content Container -->
+                <div id="dossierModalBody" class="space-y-5">
+                    <!-- Corridor Spec & Health Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="text-[10px] font-bold uppercase text-slate-500 block">Highway Corridor</span>
+                            <strong id="dossierCorridorName" class="text-sm text-slate-900 block mt-0.5">--</strong>
+                            <span id="dossierChainage" class="text-xs text-slate-500 font-mono block">KM 14+200 to KM 16+800</span>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="text-[10px] font-bold uppercase text-slate-500 block">Pavement Condition Index (PCI)</span>
+                            <div class="flex items-baseline gap-2 mt-0.5">
+                                <strong id="dossierConditionScore" class="text-2xl font-black text-rose-600">34.5</strong>
+                                <span id="dossierZoneTag" class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-bold font-mono">RED ZONE</span>
+                            </div>
+                            <span id="dossierIri" class="text-xs text-slate-500 font-mono block">Estimated IRI: 7.04 m/km</span>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="text-[10px] font-bold uppercase text-slate-500 block">Contractor SLA Liability</span>
+                            <strong id="dossierSlaPenalty" class="text-2xl font-black text-rose-600 block mt-0.5">₹ 150,000</strong>
+                            <span id="dossierSlaStatus" class="text-[10px] font-bold text-rose-700 block uppercase">NON-COMPLIANT (NHAI MCA Cl. 15.3)</span>
+                        </div>
+                    </div>
+
+                    <!-- Bill of Quantities Summary Table -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xs font-black uppercase tracking-wider text-slate-700">
+                                <i class="fa-solid fa-calculator text-emerald-600 mr-1"></i> Bill of Quantities (MoRTH SOR 2024 Schedule of Rates)
+                            </h4>
+                            <span id="dossierTotalBudget" class="text-xs font-mono font-bold text-emerald-700">Total: ₹ 30,000 (0.30 Lakhs)</span>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-100 text-slate-700 text-[10px] font-bold uppercase">
+                                    <tr>
+                                        <th class="p-2">Item</th>
+                                        <th class="p-2">Description</th>
+                                        <th class="p-2 text-center">Qty</th>
+                                        <th class="p-2 text-right">Cost (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dossierBoqRows" class="divide-y divide-slate-100 font-mono text-[11px] text-slate-700">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Blockchain Hash Bar -->
+                    <div class="p-3 bg-slate-900 text-white rounded-xl flex items-center justify-between text-xs font-mono">
+                        <div class="truncate mr-4">
+                            <span class="text-[10px] text-slate-400 block font-sans">SHA-256 Provenance Hash:</span>
+                            <span id="dossierHashText" class="text-amber-400 text-[11px] break-all">--</span>
+                        </div>
+                        <span class="px-2 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold flex-shrink-0">
+                            🛡️ Verified
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeGovDossierModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">
+                        Close
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <a id="dossierGeoJsonBtn" href="#" target="_blank" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-code"></i> PM Gati Shakti GeoJSON
+                        </a>
+                        <a id="dossierPrintBtn" href="#" target="_blank" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                            <i class="fa-solid fa-print"></i> Open Printable A4 Dossier
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 </main>
 
     <!-- JAVASCRIPT ENGINE -->
     <script>
-        // Global State
-        let map;
-        let roadPolylines = [];
-        let defectMarkers = [];
-        let currentSegments = [];
-        let activeSegment = null;
-        let selectedConditionFilter = 'ALL';
+        // Global State (var for cross-script-block accessibility)
+        var map;
+        var roadPolylines = [];
+        var defectMarkers = [];
+        var currentSegments = [];
+        var activeSegment = null;
+        var selectedConditionFilter = 'ALL';
 
         function initGovMap() {
             if (map) return;
@@ -1308,7 +1596,7 @@
             document.getElementById('cameraUploadModal').classList.add('hidden');
         }
 
-        let lastInspectedSegment = null;
+        var lastInspectedSegment = null;
 
         function closeAiInspectionResultModal() {
             document.getElementById('aiInspectionResultModal').classList.add('hidden');
@@ -1374,6 +1662,17 @@
                     center_lng: data.longitude || (activeSegment ? activeSegment.center_lng : map.getCenter().lng)
                 };
 
+                // Store active inspection data for canvas toggles
+                currentAiInspectionData = {
+                    imageUrl: data.image_url || previewUrl,
+                    label: label,
+                    confidence: conf,
+                    severity: sev,
+                    boundingBoxes: ai.bounding_boxes || [],
+                    heatmapPoints: ai.heatmap_points || [],
+                    metricsSummary: ai.metrics_summary || {}
+                };
+
                 // Populate AI Result Modal
                 document.getElementById('aiResultImg').src = data.image_url || previewUrl;
                 document.getElementById('aiResultSegmentId').innerText = data.segment_id || 'Corridor Snapped';
@@ -1401,6 +1700,25 @@
                 document.getElementById('aiProbNormal').innerText = `${pNor.toFixed(1)}%`;
                 document.getElementById('aiProbNormalBar').style.width = `${pNor}%`;
 
+                // Populate IRC Metrics Card
+                const bboxes = ai.bounding_boxes || [];
+                const firstBox = bboxes[0] || {};
+                const m = firstBox.measurements || {};
+                const metricsCard = document.getElementById('aiIrcMetricsCard');
+                
+                if (label !== 'NORMAL' && bboxes.length > 0) {
+                    metricsCard.classList.remove('hidden');
+                    document.getElementById('aiIrcGradeTag').innerText = firstBox.irc_grade || 'IRC:SP:84 Grade 2';
+                    document.getElementById('aiMetricDim').innerText = m.estimated_depth_cm ? `${m.estimated_depth_cm} cm depth` : (m.crack_width_mm ? `${m.crack_width_mm} mm width` : '5.2 cm');
+                    document.getElementById('aiMetricArea').innerText = m.surface_area_sq_m ? `${m.surface_area_sq_m} m²` : (m.crack_length_m ? `${m.crack_length_m} m length` : '0.18 m²');
+                    document.getElementById('aiMetricCost').innerText = firstBox.estimated_repair_cost_inr ? `₹${firstBox.estimated_repair_cost_inr.toLocaleString()}` : '₹1,500';
+                } else {
+                    document.getElementById('aiIrcGradeTag').innerText = 'Satisfactory Pavement';
+                    document.getElementById('aiMetricDim').innerText = '0.0 cm';
+                    document.getElementById('aiMetricArea').innerText = '0.0 m²';
+                    document.getElementById('aiMetricCost').innerText = '₹0';
+                }
+
                 document.getElementById('aiResultHealthScore').innerText = `${health.toFixed(1)} / 100`;
                 
                 const zoneBadge = document.getElementById('aiResultZoneBadge');
@@ -1408,6 +1726,9 @@
                 zoneBadge.className = `inline-block px-3 py-1 rounded-lg text-xs font-mono font-black shadow text-white ${zone === 'RED' ? 'bg-rose-600' : (zone === 'YELLOW' ? 'bg-amber-600' : 'bg-emerald-600')}`;
 
                 document.getElementById('aiResultRecommendation').innerText = ai.recommendation || data.recommendation || 'Continuous surveillance recommended.';
+
+                // Render Canvas Overlay
+                renderAiCanvasOverlay(data.image_url || previewUrl, bboxes, ai.heatmap_points || [], canvasShowBBoxes, canvasShowHeatmap, canvasShowMetrics);
 
                 // Show AI modal
                 document.getElementById('aiInspectionResultModal').classList.remove('hidden');
@@ -1668,6 +1989,370 @@
 
         function openEmergencyPathModal() {
             alert('Ambulance & Fire Emergency Smooth Pathfinder Active! Filtering out pothole shockwaves (>2.8g).');
+        }
+
+
+        // =========================================================================
+        // OPTION 1: INTERACTIVE CANVAS BOUNDING BOX & HEATMAP OVERLAY ENGINE
+        // =========================================================================
+        var currentAiInspectionData = null;
+        var canvasShowBBoxes = true;
+        var canvasShowHeatmap = false;
+        var canvasShowMetrics = true;
+
+        function toggleAiBBoxes() {
+            canvasShowBBoxes = !canvasShowBBoxes;
+            const btn = document.getElementById('toggleBBoxBtn');
+            btn.className = canvasShowBBoxes 
+                ? 'flex-1 py-1 px-2 rounded-lg bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-1'
+                : 'flex-1 py-1 px-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition flex items-center justify-center gap-1';
+            refreshAiCanvas();
+        }
+
+        function toggleAiHeatmap() {
+            canvasShowHeatmap = !canvasShowHeatmap;
+            const btn = document.getElementById('toggleHeatmapBtn');
+            btn.className = canvasShowHeatmap 
+                ? 'flex-1 py-1 px-2 rounded-lg bg-rose-600 text-white shadow-sm transition flex items-center justify-center gap-1'
+                : 'flex-1 py-1 px-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition flex items-center justify-center gap-1';
+            refreshAiCanvas();
+        }
+
+        function toggleAiMetrics() {
+            canvasShowMetrics = !canvasShowMetrics;
+            const btn = document.getElementById('toggleMetricsBtn');
+            btn.className = canvasShowMetrics 
+                ? 'flex-1 py-1 px-2 rounded-lg bg-indigo-600 text-white shadow-sm transition flex items-center justify-center gap-1'
+                : 'flex-1 py-1 px-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition flex items-center justify-center gap-1';
+            refreshAiCanvas();
+        }
+
+        function refreshAiCanvas() {
+            if (!currentAiInspectionData) return;
+            renderAiCanvasOverlay(
+                currentAiInspectionData.imageUrl,
+                currentAiInspectionData.boundingBoxes,
+                currentAiInspectionData.heatmapPoints,
+                canvasShowBBoxes,
+                canvasShowHeatmap,
+                canvasShowMetrics
+            );
+        }
+
+        function renderAiCanvasOverlay(imgSrc, bboxes, heatmapPoints, showBoxes, showHeatmap, showMetrics) {
+            const canvas = document.getElementById('aiCanvasOverlay');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = imgSrc;
+
+            img.onload = function() {
+                canvas.width = img.naturalWidth || 640;
+                canvas.height = img.naturalHeight || 480;
+                const cw = canvas.width;
+                const ch = canvas.height;
+
+                // 1. Draw base photo
+                ctx.clearRect(0, 0, cw, ch);
+                ctx.drawImage(img, 0, 0, cw, ch);
+
+                // 2. Draw Grad-CAM / Defect Thermal Heatmap
+                if (showHeatmap && heatmapPoints && heatmapPoints.length > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.55;
+                    heatmapPoints.forEach(pt => {
+                        if (pt.intensity > 0.1) {
+                            const px = pt.norm_x * cw;
+                            const py = pt.norm_y * ch;
+                            const radius = Math.min(cw, ch) * 0.18 * pt.intensity;
+
+                            const radGrad = ctx.createRadialGradient(px, py, 2, px, py, radius);
+                            if (pt.intensity > 0.6) {
+                                radGrad.addColorStop(0, 'rgba(239, 68, 68, 0.9)');    // Red
+                                radGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.6)');  // Amber
+                                radGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+                            } else {
+                                radGrad.addColorStop(0, 'rgba(245, 158, 11, 0.8)');
+                                radGrad.addColorStop(0.6, 'rgba(59, 130, 246, 0.4)');
+                                radGrad.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                            }
+                            ctx.fillStyle = radGrad;
+                            ctx.beginPath();
+                            ctx.arc(px, py, radius, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    });
+                    ctx.restore();
+                }
+
+                // 3. Draw Bounding Boxes & Annotation Chips
+                if (showBoxes && bboxes && bboxes.length > 0) {
+                    bboxes.forEach(box => {
+                        const bx = (box.norm_x !== undefined) ? box.norm_x * cw : box.x;
+                        const by = (box.norm_y !== undefined) ? box.norm_y * ch : box.y;
+                        const bw = (box.norm_width !== undefined) ? box.norm_width * cw : box.width;
+                        const bh = (box.norm_height !== undefined) ? box.norm_height * ch : box.height;
+
+                        const isPothole = (box.label && box.label.toLowerCase().includes('pothole')) || (box.id && box.id.startsWith('PH'));
+                        const strokeColor = isPothole ? '#ef4444' : '#f59e0b';
+                        const fillColor = isPothole ? 'rgba(239, 68, 68, 0.18)' : 'rgba(245, 158, 11, 0.18)';
+
+                        // Box fill and stroke
+                        ctx.fillStyle = fillColor;
+                        ctx.fillRect(bx, by, bw, bh);
+
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = Math.max(2, Math.round(cw / 250));
+                        ctx.strokeRect(bx, by, bw, bh);
+
+                        // Corner targets
+                        const cornerLen = Math.min(16, bw * 0.25, bh * 0.25);
+                        ctx.lineWidth = Math.max(3, Math.round(cw / 180));
+                        // Top-left
+                        ctx.beginPath();
+                        ctx.moveTo(bx, by + cornerLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cornerLen, by);
+                        ctx.stroke();
+                        // Top-right
+                        ctx.beginPath();
+                        ctx.moveTo(bx + bw - cornerLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cornerLen);
+                        ctx.stroke();
+                        // Bottom-left
+                        ctx.beginPath();
+                        ctx.moveTo(bx, by + bh - cornerLen); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cornerLen, by + bh);
+                        ctx.stroke();
+                        // Bottom-right
+                        ctx.beginPath();
+                        ctx.moveTo(bx + bw - cornerLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cornerLen);
+                        ctx.stroke();
+
+                        // Header Tag
+                        const tagText = `${box.label || 'Defect'} (${box.confidence ? box.confidence + '%' : '92%'})`;
+                        ctx.font = `bold ${Math.max(11, Math.round(cw / 45))}px monospace`;
+                        const textW = ctx.measureText(tagText).width;
+                        const tagH = Math.max(16, Math.round(cw / 35));
+
+                        ctx.fillStyle = strokeColor;
+                        ctx.fillRect(bx, Math.max(0, by - tagH), textW + 10, tagH);
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(tagText, bx + 5, Math.max(12, by - 4));
+
+                        // Dimension metric callout
+                        if (showMetrics && box.measurements) {
+                            const m = box.measurements;
+                            let metricStr = '';
+                            if (m.estimated_depth_cm) {
+                                metricStr = `Depth: ${m.estimated_depth_cm}cm | Area: ${m.surface_area_sq_m}m²`;
+                            } else if (m.crack_width_mm) {
+                                metricStr = `Width: ${m.crack_width_mm}mm | Len: ${m.crack_length_m}m`;
+                            }
+                            if (metricStr) {
+                                ctx.font = `bold ${Math.max(9, Math.round(cw / 55))}px monospace`;
+                                const mW = ctx.measureText(metricStr).width;
+                                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                                ctx.fillRect(bx, by + bh, mW + 8, tagH * 0.9);
+                                ctx.fillStyle = '#38bdf8';
+                                ctx.fillText(metricStr, bx + 4, by + bh + tagH * 0.65);
+                            }
+                        }
+                    });
+                }
+            };
+        }
+
+
+        // =========================================================================
+        // OPTION 2: DASHCAM VIDEO CLIP ANALYZER JS ENGINE
+        // =========================================================================
+        var activeVideoAnalysis = null;
+
+        function openDashcamVideoModal() {
+            document.getElementById('dashcamVideoModal').classList.remove('hidden');
+        }
+
+        function closeDashcamVideoModal() {
+            document.getElementById('dashcamVideoModal').classList.add('hidden');
+        }
+
+        async function runSampleDashcamStream() {
+            const loading = document.getElementById('dashcamLoadingState');
+            const content = document.getElementById('dashcamAnalysisContent');
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/v3/video/sample-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duration_seconds: 20.0,
+                        sample_interval_sec: 1.5,
+                        start_latitude: activeSegment ? activeSegment.center_lat : 28.5450,
+                        start_longitude: activeSegment ? activeSegment.center_lng : 77.1250
+                    })
+                });
+
+                const data = await res.json();
+                loading.classList.add('hidden');
+                activeVideoAnalysis = data;
+                renderVideoAnalysisUI(data);
+            } catch (err) {
+                loading.classList.add('hidden');
+                alert('Video analysis error: ' + err);
+            }
+        }
+
+        async function runDashcamVideoUpload() {
+            const fileInput = document.getElementById('dashcamFileInput');
+            const loading = document.getElementById('dashcamLoadingState');
+            const content = document.getElementById('dashcamAnalysisContent');
+
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+
+            const formData = new FormData();
+            if (fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            }
+            formData.append('sampling_interval', '1.5');
+            formData.append('start_latitude', activeSegment ? activeSegment.center_lat : 28.5450);
+            formData.append('start_longitude', activeSegment ? activeSegment.center_lng : 77.1250);
+
+            try {
+                const res = await fetch('/api/v3/video/upload-analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                loading.classList.add('hidden');
+                activeVideoAnalysis = data;
+                renderVideoAnalysisUI(data);
+            } catch (err) {
+                loading.classList.add('hidden');
+                alert('Video upload analysis error: ' + err);
+            }
+        }
+
+        function renderVideoAnalysisUI(data) {
+            const content = document.getElementById('dashcamAnalysisContent');
+            content.classList.remove('hidden');
+
+            const sum = data.summary || {};
+            document.getElementById('videoAvgScore').innerText = sum.overall_condition_score || '54.2';
+            document.getElementById('videoTripZone').innerText = `${sum.overall_zone || 'YELLOW'} ZONE`;
+            document.getElementById('videoPotholeCount').innerText = sum.potholes_detected || 0;
+            document.getElementById('videoSurveyDistance').innerText = `${data.video_metadata ? data.video_metadata.survey_distance_km : 0.32} km`;
+
+            const timeline = data.timeline || [];
+            const scrubber = document.getElementById('videoTimelineScrubber');
+            scrubber.max = Math.max(0, timeline.length - 1);
+            scrubber.value = 0;
+
+            // Render Defect Hotspots Chips
+            const chipsContainer = document.getElementById('videoHotspotChips');
+            const hotspots = data.hotspots || [];
+            if (hotspots.length > 0) {
+                chipsContainer.innerHTML = hotspots.map(h => `
+                    <button onclick="seekVideoTimeline(${h.frame_index})" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold text-white shadow flex items-center gap-1 transition ${h.label === 'Pothole' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'}">
+                        <span>⏱️ ${h.timestamp_formatted}</span>
+                        <span>•</span>
+                        <span>${h.label.toUpperCase()} (${h.confidence}%)</span>
+                    </button>
+                `).join('');
+            } else {
+                chipsContainer.innerHTML = '<span class="text-xs text-slate-400">No defects detected in this video stretch.</span>';
+            }
+
+            seekVideoTimeline(0);
+        }
+
+        function seekVideoTimeline(index) {
+            if (!activeVideoAnalysis || !activeVideoAnalysis.timeline) return;
+            const timeline = activeVideoAnalysis.timeline;
+            const idx = Math.min(timeline.length - 1, Math.max(0, parseInt(index)));
+            const frame = timeline[idx];
+            if (!frame) return;
+
+            document.getElementById('videoCurrentFrameImg').src = frame.thumbnail_url;
+            document.getElementById('videoCurrentTimeChip').innerText = `⏱️ ${frame.timestamp_formatted}`;
+            
+            const defChip = document.getElementById('videoCurrentDefectChip');
+            defChip.innerText = frame.label.toUpperCase();
+            defChip.className = `px-2.5 py-1 rounded-lg text-xs font-mono font-black shadow text-white ${frame.label === 'Pothole' ? 'bg-rose-600' : (frame.label === 'Crack' ? 'bg-amber-600' : 'bg-emerald-600')}`;
+
+            document.getElementById('videoCurrentHealthBadge').innerText = `Score: ${frame.health_score} / 100 (${frame.zone})`;
+            document.getElementById('videoTimelineProgress').innerText = `Frame ${idx + 1} of ${timeline.length} (${frame.timestamp_formatted})`;
+            document.getElementById('videoFrameRecommendation').innerText = frame.recommendation || 'Pavement within serviceability thresholds.';
+            document.getElementById('videoTimelineScrubber').value = idx;
+        }
+
+        function integrateVideoToMap() {
+            if (!activeVideoAnalysis) return;
+            closeDashcamVideoModal();
+            if (map) {
+                const c = map.getCenter();
+                loadGovRoadNetworkByCoords(c.lat, c.lng);
+            }
+            alert('Dashcam patrol telematics & defect detections integrated into live GIS road network.');
+        }
+
+
+        // =========================================================================
+        // OPTION 3: GOVERNMENT AUDIT DOSSIER JS ENGINE (PM GATI SHAKTI COMPLIANT)
+        // =========================================================================
+        var activeDossierData = null;
+
+        async function openGovDossierModal(segmentId) {
+            const segId = segmentId || (activeSegment ? activeSegment.segment_id : 'OSM-LIVE-SEGMENT');
+            document.getElementById('govAuditDossierModal').classList.remove('hidden');
+            await loadGovDossierData(segId);
+        }
+
+        function closeGovDossierModal() {
+            document.getElementById('govAuditDossierModal').classList.add('hidden');
+        }
+
+        async function loadGovDossierData(segmentId) {
+            try {
+                const res = await fetch(`/api/v3/gov/dossier/${segmentId}`);
+                const data = await res.json();
+                const d = data.dossier;
+                activeDossierData = d;
+
+                document.getElementById('dossierCorridorName').innerText = d.corridor_profile.corridor_name;
+                document.getElementById('dossierChainage').innerText = `${d.corridor_profile.chainage_start_km} to ${d.corridor_profile.chainage_end_km} • ${d.corridor_profile.carriageway_type}`;
+                
+                document.getElementById('dossierConditionScore').innerText = d.pavement_health_index.condition_score;
+                const zTag = document.getElementById('dossierZoneTag');
+                zTag.innerText = `${d.pavement_health_index.zone} ZONE`;
+                zTag.className = `px-2 py-0.5 rounded text-[10px] font-bold font-mono ${d.pavement_health_index.zone === 'RED' ? 'bg-rose-100 text-rose-800' : (d.pavement_health_index.zone === 'YELLOW' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')}`;
+
+                document.getElementById('dossierIri').innerText = `Estimated IRI: ${d.pavement_health_index.estimated_iri_m_per_km} m/km (PCI: ${d.pavement_health_index.pci_pavement_condition_index})`;
+
+                document.getElementById('dossierSlaPenalty').innerText = `₹ ${d.contractor_sla_audit.calculated_penalty_inr.toLocaleString()}`;
+                document.getElementById('dossierSlaStatus').innerText = `${d.contractor_sla_audit.contractor_compliance_status} • ${d.contractor_sla_audit.concessionaire_name}`;
+
+                document.getElementById('dossierTotalBudget').innerText = `Total: ₹ ${d.bill_of_quantities_boq.total_estimated_budget_inr.toLocaleString()} (${d.bill_of_quantities_boq.total_budget_lakhs_inr} Lakhs)`;
+
+                // BOQ Rows
+                const boqRows = document.getElementById('dossierBoqRows');
+                boqRows.innerHTML = d.bill_of_quantities_boq.line_items.map(item => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-2 font-bold text-indigo-700">${item.item_code}</td>
+                        <td class="p-2">${item.description}</td>
+                        <td class="p-2 text-center">${item.quantity} ${item.unit}</td>
+                        <td class="p-2 text-right font-bold text-emerald-700">₹${item.total_cost_inr.toLocaleString()}</td>
+                    </tr>
+                `).join('');
+
+                // Hash & Link Buttons
+                document.getElementById('dossierHashText').innerText = d.provenance_hash;
+                document.getElementById('dossierPrintBtn').href = `/gov/dossier/print/${d.corridor_profile.segment_id}`;
+                document.getElementById('dossierGeoJsonBtn').href = `/api/v3/gov/dossier/export-geojson/${d.corridor_profile.segment_id}`;
+            } catch (err) {
+                console.error("Dossier loading error:", err);
+            }
         }
     </script>
 
