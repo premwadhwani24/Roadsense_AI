@@ -317,13 +317,21 @@ The RoadSense AI platform includes complete **real-world production deployment f
 
 ## 🧠 AI / Computer Vision Defect Detection Pipeline
 
-### 📊 Dataset Integration:
-- **Dataset**: `Cracks and Potholes in Road Images Dataset` (2,235 survey samples with binary ground-truth segmentation masks for CRACK, POTHOLE, and LANE).
+### 📊 Dataset Specifications & Size:
+- **Dataset Name**: `Cracks and Potholes in Road Images Dataset` (Mendeley Data / NDTI Survey)
+- **Archive Size**: **224.29 MB** (`Cracks-and-Potholes-in-Road-Images-Dataset-master.zip`, 235,181,512 bytes)
+- **Extracted Footprint**: **243.12 MB** (254,927,649 bytes)
+- **Total Files**: **8,952 files** across **2,235 survey samples**
+- **Per-Sample Structure**:
+  - `RAW`: Original highway camera photograph (`.jpg`)
+  - `CRACK`: Binary crack ground-truth segmentation mask (`.png`)
+  - `POTHOLE`: Binary pothole ground-truth segmentation mask (`.png`)
+  - `LANE`: Road/lane surface area mask (`.png`)
 - **Class Breakdown**:
   - `Crack`: 1,440 samples
   - `Pothole`: 563 samples
   - `Normal`: 232 samples
-- **Dataset Manifest**: `dataset_manifest.csv` with 80/20 train/validation stratified splits.
+- **Dataset Manifest**: `dataset_manifest.csv` (1,787 training samples [80%], 448 validation samples [20%])
 
 ### 🔬 Architecture & Model:
 - **Backbone**: `RoadDefectResNet` (Pure PyTorch ResNet-18 implementation in `road_defect_model.py`).
@@ -338,4 +346,5 @@ python train_road_defects.py --epochs 5 --batch-size 32 --lr 0.0003 --output roa
 
 ### 🔍 Vision Inference API:
 - `POST /api/vision/analyze` — Computer vision analysis returning predicted label (`Pothole`, `Crack`, `Normal`), confidence %, defect severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `NORMAL`), and actionable repair guidance.
+
 
