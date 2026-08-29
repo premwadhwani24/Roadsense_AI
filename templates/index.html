@@ -924,11 +924,8 @@
         let activeSegment = null;
         let selectedConditionFilter = 'ALL';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initGovMap();
-
-        // Initialize Map
         function initGovMap() {
+            if (map) return;
             map = L.map('indiaMap', {
                 center: [28.5700, 77.2400], // Centered on Delhi NCR
                 zoom: 12,
@@ -945,45 +942,18 @@
                 const c = map.getCenter();
                 loadGovRoadNetworkByCoords(c.lat, c.lng);
             });
+
+            // Ensure Leaflet calculates viewport dimensions properly
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 250);
         }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            initGovMap();
             loadGovRoadNetwork();
             initGovSSE();
         });
-
-        // Initialize Map
-        
-        // Initialize Map
-        function _old_initGovMap() {
-            map = L.map('indiaMap', {
-                center: [28.5700, 77.2400], // Centered on Delhi NCR
-                zoom: 12,
-                zoomControl: true
-            });
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors | RoadSense AI Gov Platform'
-            }).addTo(map);
-
-            // Dynamic OSM Fetching on Map Move / Drag / Zoom End
-            map.on('moveend', () => {
-                const c = map.getCenter();
-                loadGovRoadNetworkByCoords(c.lat, c.lng);
-            });
-        }
-
-            map = L.map('indiaMap', {
-                center: [28.5700, 77.2400], // Centered on Delhi NCR
-                zoom: 12,
-                zoomControl: true
-            });
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors | RoadSense AI Gov Platform'
-            }).addTo(map);
-        }
 
         // Load Road Network from API
         async function loadGovRoadNetwork(state = null, status = null) {
