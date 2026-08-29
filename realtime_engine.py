@@ -135,6 +135,38 @@ class WeatherEngine:
 
     @staticmethod
     def get_weather(city: str = "", lat: Optional[float] = None, lng: Optional[float] = None) -> Dict[str, Any]:
+        # 1. Try Open-Meteo free API first (No API key required)
+        if lat is not None and lng is not None:
+            try:
+                om_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon if 'lon' in locals() else lng}&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m"
+                resp = requests.get(om_url, timeout=3)
+                if resp.status_code == 200:
+                    data = resp.json().get("current", {})
+                    temp = data.get("temperature_2m", 28.0)
+                    rh = data.get("relative_humidity_2m", 60)
+                    rain = data.get("precipitation", data.get("rain", 0.0))
+                    wind = data.get("wind_speed_10m", 12.0)
+                    wcode = data.get("weather_code", 0)
+
+                    cond = "Clear"
+                    if wcode in [1, 2, 3]: cond = "Partly Cloudy"
+                    elif wcode in [51, 53, 55, 61, 63, 65, 80, 81]: cond = "Rain"
+                    elif wcode in [95, 96, 99]: cond = "Thunderstorm"
+
+                    return {
+                        "temperature_c": temp,
+                        "humidity_pct": rh,
+                        "condition": cond,
+                        "description": f"{cond.lower()} (Open-Meteo Live)",
+                        "rainfall_last_3h_mm": round(rain * 3.0, 1),
+                        "wind_speed_kmh": round(wind, 1),
+                        "water_logging_risk": "HIGH" if rain > 10.0 else ("MEDIUM" if rain > 2.0 else "LOW"),
+                        "source": "OPEN_METEO_LIVE",
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }
+            except Exception as e:
+                pass
+
         if OPENWEATHER_KEY and (city or (lat and lng)):
             try:
                 params = {"appid": OPENWEATHER_KEY, "units": "metric"}

@@ -1867,33 +1867,49 @@ def gov_road_network():
     """
     lat = request.args.get("lat", default=28.6139, type=float)
     lng = request.args.get("lng", default=77.2090, type=float)
-    radius_km = request.args.get("radius_km", default=50.0, type=float)
+    radius_km = request.args.get("radius_km", default=25.0, type=float)
     state = request.args.get("state")
     district = request.args.get("district")
     city = request.args.get("city")
     status = request.args.get("status")
     pincode = request.args.get("pincode")
 
-    # Fetch from SQLite gov_road_segments table
+    # 1. Fetch live OpenStreetMap roads for these exact coordinates dynamically
+    osm_roads = GISRoadNetworkEngine.query_live_osm_roads(lat=lat, lng=lng, radius_m=int(min(radius_km, 3.5) * 1000))
+
+    # 2. Fetch existing DB segments
     db_segments = DatabaseManager.get_gov_segments(state=state, district=district, city=city, status=status, pincode=pincode)
 
-    if not db_segments:
-        # Fallback to GIS engine registry directly
-        db_segments = GISRoadNetworkEngine.get_nearby_road_network(lat=lat, lng=lng, radius_km=radius_km)
+    # Combine DB segments + OSM live segments (keyed by segment_id)
+    segments_map = {}
+    for s in db_segments:
+        segments_map[s["segment_id"]] = s
+
+    for s in osm_roads:
+        s_id = s["segment_id"]
+        if s_id not in segments_map:
+            segments_map[s_id] = s
+        else:
+            # Preserve DB condition status if available
+            segments_map[s_id]["polyline"] = s["polyline"]
+
+    combined_segments = list(segments_map.values())
 
     enriched_segments = []
-    for seg in db_segments:
+    for seg in combined_segments:
         center_lat = seg.get("center_lat", lat)
         center_lng = seg.get("center_lng", lng)
         d_km = haversine_km(lat, lng, center_lat, center_lng)
-        
-        if radius_km and d_km > radius_km and not (state or district or city or pincode):
+
+        # Filter by status if specified
+        c_status = (seg.get("condition_status") or seg.get("condition") or "DATA_UNAVAILABLE").upper()
+        if status and status.upper() != "ALL" and c_status != status.upper():
             continue
 
-        # Get latest evidence records for this segment
+        # Get evidence records for this segment
         evidence = DatabaseManager.get_road_evidence(seg["segment_id"], limit=5)
-        
-        # Calculate real-time health score from evidence
+
+        # Calculate real-time health score
         eval_result = PavementScoringEngine.evaluate_road_health(
             base_pci=seg.get("pci_score"),
             iri=seg.get("iri_score"),
@@ -1925,8 +1941,98 @@ def gov_road_network():
         "radius_km": radius_km,
         "total_segments": len(enriched_segments),
         "segments": enriched_segments,
-        "provenance_standard": "IRC:SP:84-2019 Authentic Evidence Layer"
+        "provenance_standard": "OPENSTREETMAP_LIVE_DATA_FUSION"
     }), 200
+
+
+@app.route("/api/v3/gov/camera/upload-inspect", methods=["POST"])
+def gov_camera_upload_inspect():
+    """
+    Accepts photo file upload or sample image, executes real-time Computer Vision inference,
+    snaps coordinates to the road, updates road condition dynamically, and stores evidence.
+    """
+    segment_id = request.form.get("segment_id") or request.json.get("segment_id") if request.is_json else request.form.get("segment_id")
+    lat = float(request.form.get("latitude", 28.5450)) if not request.is_json else float(request.json.get("latitude", 28.5450))
+    lng = float(request.form.get("longitude", 77.1250)) if not request.is_json else float(request.json.get("longitude", 77.1250))
+    image_url = None
+
+    if 'file' in request.files:
+        file = request.files['file']
+        if file and file.filename:
+            filename = f"upload_{int(time.time())}_{random.randint(100,999)}.jpg"
+            upload_dir = os.path.join("static", "assets", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+            save_path = os.path.join(upload_dir, filename)
+            file.save(save_path)
+            image_url = f"/static/assets/uploads/{filename}"
+
+    if not image_url:
+        image_url = request.json.get("image_url") if request.is_json else request.form.get("image_url", "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg")
+
+    # Run CV Detection
+    frame_result = CVDefectIngestor.process_camera_frame(
+        image_name=image_url,
+        latitude=lat,
+        longitude=lng,
+        road_id=segment_id or "OSM-LIVE-SEGMENT",
+        vehicle_id="USER-CAMERA-UPLOAD"
+    )
+
+    defects = frame_result.get("defects", [])
+    potholes = sum(1 for d in defects if d.get("class_code") == "D40" or "POTHOLE" in d.get("class_name", "").upper())
+    cracks = sum(1 for d in defects if d.get("class_code") in ["D00", "D10", "D20"] or "CRACK" in d.get("class_name", "").upper())
+
+    # Calculate dynamic new health score
+    new_health = max(10.0, 95.0 - (potholes * 16.0) - (cracks * 7.5))
+    new_condition = "RED" if new_health < 50.0 else ("YELLOW" if new_health < 75.0 else "GREEN")
+
+    # Snap to nearest segment if segment_id not provided
+    if not segment_id:
+        osm_roads = GISRoadNetworkEngine.query_live_osm_roads(lat, lng, radius_m=1000)
+        segment_id, _ = GISRoadNetworkEngine.snap_point_to_nearest_segment(lat, lng, osm_roads)
+        if not segment_id and osm_roads:
+            segment_id = osm_roads[0]["segment_id"]
+
+    if segment_id:
+        # Update segment in SQLite
+        DatabaseManager.add_or_update_gov_segment({
+            "segment_id": segment_id,
+            "road_name": f"Surveyed Road Segment ({segment_id})",
+            "center_lat": lat,
+            "center_lng": lng,
+            "condition_status": new_condition,
+            "health_score": round(new_health, 1),
+            "pothole_count": potholes,
+            "crack_count": cracks,
+            "confidence": 0.95,
+            "last_surveyed_at": datetime.utcnow().isoformat() + "Z"
+        })
+
+        # Save evidence record
+        DatabaseManager.add_road_evidence(
+            segment_id=segment_id,
+            latitude=lat,
+            longitude=lng,
+            source_type="USER_CAMERA_UPLOAD",
+            device_id="MOBILE_INSPECTION_CAMERA",
+            image_url=image_url,
+            defects_json=json.dumps(defects),
+            confidence=0.95
+        )
+
+    return jsonify({
+        "success": True,
+        "segment_id": segment_id,
+        "image_url": image_url,
+        "detected_defects_count": len(defects),
+        "defects": defects,
+        "potholes_count": potholes,
+        "cracks_count": cracks,
+        "calculated_health_score": round(new_health, 1),
+        "new_condition_status": new_condition,
+        "provenance": "LIVE_COMPUTER_VISION_INSPECTION"
+    }), 200
+
 
 @app.route("/api/v3/gov/road/<segment_id>/profile", methods=["GET"])
 @app.route("/api/roads/<segment_id>/health", methods=["GET"])
