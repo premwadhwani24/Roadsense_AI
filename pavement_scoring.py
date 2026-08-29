@@ -165,28 +165,34 @@ class PavementScoringEngine:
 
         confidence = min(0.98, max(0.50, round(freshness * corroboration_factor, 2)))
 
-        # 6. Condition Classification
-        if fused_score >= 75.0 and (iri is None or iri < 2.8) and pothole_count == 0:
+        # 6. Condition & Zone Classification
+        # RED < 40 (critical), YELLOW 40-70 (moderate/maintainable), GREEN > 70 (good)
+        if fused_score > 70.0 and (iri is None or iri < 3.0) and pothole_count == 0:
             condition = "GREEN"
-            condition_label = "Optimal Ride Quality (No Active Repairs Required)"
+            zone = "GREEN"
+            condition_label = "Optimal / Good Condition (Green Zone)"
             color_hex = "#10B981"
-            explanation = f"Pavement is in healthy condition (Health Score: {fused_score}/100, IRI: {iri or 1.8} m/km). Routine preventative surveillance recommended."
-        elif fused_score >= 50.0:
+            explanation = f"Pavement is in healthy condition (Score: {fused_score}/100, IRI: {iri or 1.8} m/km). Routine preventative surveillance recommended."
+        elif fused_score >= 40.0:
             condition = "YELLOW"
-            condition_label = "Maintainable (Improvement Required to reach Green)"
+            zone = "YELLOW"
+            condition_label = "Moderate Wear / Maintainable (Yellow Zone)"
             color_hex = "#F59E0B"
             explanation = f"Moderate distress detected ({crack_count} cracks, {pothole_count} surface defects). Preventative micro-surfacing and crack sealing will upgrade condition to GREEN."
         else:
             condition = "RED"
-            condition_label = "Critical Damage (Urgent Maintenance Intervention)"
+            zone = "RED"
+            condition_label = "Critical Damage / Urgent Action (Red Zone)"
             color_hex = "#EF4444"
-            explanation = f"Severe pavement deterioration detected (Health: {fused_score}/100, {pothole_count} potholes, peak G-force {g_force_peak}g). Immediate structural repair required per IRC:SP:84."
+            explanation = f"Severe pavement deterioration detected (Score: {fused_score}/100, {pothole_count} potholes, peak G-force {g_force_peak}g). Immediate structural repair required per IRC:SP:84."
 
         provenance = PavementScoringEngine.classify_provenance(freshness, is_live_sensor, has_data)
 
         return {
             "health_score": fused_score,
+            "condition_score": fused_score,
             "condition": condition,
+            "zone": zone,
             "condition_label": condition_label,
             "color_hex": color_hex,
             "confidence": confidence,

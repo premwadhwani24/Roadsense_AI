@@ -9,6 +9,7 @@ Features:
 - Real-time event broadcasting via SSE to drop live vehicle & defect markers on Leaflet GIS maps
 """
 
+import os
 import time
 import math
 import json
@@ -100,20 +101,100 @@ class LiveStreamService:
         current_lng = lng or veh["current_lng"]
 
         # Run CV Inference on stream frame
-        from rdd_engine import RoadDamageDetectorEngine
         from gis_road_network import GISRoadNetworkEngine
         from database import DatabaseManager
 
         sample_img = "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg"
-        detection_res = RoadDamageDetectorEngine.detect_damage(sample_img)
-        defects = detection_res.get("objects", [])
+        target_img = sample_img
+        temp_file = None
+
+        if frame_b64:
+            try:
+                import base64
+                import tempfile
+                if "," in frame_b64:
+                    frame_b64 = frame_b64.split(",", 1)[1]
+                img_data = base64.b64decode(frame_b64)
+                fd, temp_file = tempfile.mkstemp(suffix=".jpg")
+                with open(temp_file, "wb") as f:
+                    f.write(img_data)
+                target_img = temp_file
+            except Exception as e:
+                logger.warning(f"Failed to decode frame_b64: {e}")
+
+        # Run vision inference via trained PyTorch ResNet-18
+        ai_pred = None
+        try:
+            from vision_service import RoadVisionService
+            v_service = RoadVisionService()
+            rel_path = target_img.lstrip("/") if isinstance(target_img, str) else target_img
+            if not os.path.exists(rel_path) and not os.path.isabs(rel_path):
+                rel_path = os.path.join(os.getcwd(), rel_path)
+            if os.path.exists(rel_path):
+                ai_pred = v_service.analyze_image_detailed(rel_path)
+        except Exception as e:
+            logger.info(f"Vision service fallback: {e}")
+
+        if temp_file and os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except:
+                pass
+
+        if ai_pred:
+            label = ai_pred.get("label", "Normal")
+            conf = ai_pred.get("confidence", 75.0)
+            sev = ai_pred.get("severity", "LOW")
+            defects = [{
+                "defect_id": f"DASHCAM-AI-{random.randint(1000, 9999)}",
+                "class_code": "D40" if label == "Pothole" else "D00",
+                "class_name": label,
+                "severity": sev,
+                "confidence": round(conf / 100.0, 2),
+                "latitude": current_lat,
+                "longitude": current_lng,
+                "recommendation": ai_pred.get("recommendation")
+            }] if label != "Normal" else []
+            potholes = 1 if label == "Pothole" else 0
+            cracks = 1 if label == "Crack" else 0
+            new_health = 32.5 if label == "Pothole" else (58.0 if label == "Crack" else 88.0)
+        else:
+            from rdd_engine import RoadDamageDetectorEngine
+            detection_res = RoadDamageDetectorEngine.detect_damage(sample_img)
+            defects = detection_res.get("objects", [])
+            potholes = sum(1 for d in defects if d.get("class_code") == "D40")
+            cracks = sum(1 for d in defects if d.get("class_code") in ["D00", "D10", "D20"])
+            new_health = max(15.0, 90.0 - (potholes * 25.0) - (cracks * 12.0))
+            label = "Pothole" if potholes > 0 else ("Crack" if cracks > 0 else "Normal")
+            sev = "HIGH" if potholes > 0 else ("MEDIUM" if cracks > 0 else "LOW")
+            ai_pred = {"label": label, "confidence": 85.0, "severity": sev, "recommendation": "Maintain surface integrity."}
+
+        new_zone = "RED" if new_health < 40.0 else ("YELLOW" if new_health <= 70.0 else "GREEN")
 
         # Snap coordinates to road segment
         snapped_segment_id, snap_dist_m = GISRoadNetworkEngine.snap_point_to_nearest_segment(current_lat, current_lng)
+        target_seg_id = snapped_segment_id or veh["route_segment_id"]
+
+        # Update road segment condition
+        if target_seg_id:
+            DatabaseManager.add_or_update_gov_segment({
+                "segment_id": target_seg_id,
+                "road_name": f"Patrolled Highway ({target_seg_id})",
+                "center_lat": current_lat,
+                "center_lng": current_lng,
+                "condition_status": new_zone,
+                "zone": new_zone,
+                "health_score": round(new_health, 1),
+                "condition_score": round(new_health, 1),
+                "pothole_count": potholes,
+                "crack_count": cracks,
+                "confidence": 0.96,
+                "last_surveyed_at": datetime.utcnow().isoformat() + "Z"
+            })
 
         # Store evidence
         ev_id = DatabaseManager.add_road_evidence(
-            segment_id=snapped_segment_id or veh["route_segment_id"],
+            segment_id=target_seg_id,
             latitude=current_lat,
             longitude=current_lng,
             source_type="LIVE_DASHCAM_STREAM",
@@ -130,10 +211,13 @@ class LiveStreamService:
             "stream_status": "PROCESSING_FRAME_LIVE",
             "frame_timestamp": datetime.utcnow().isoformat() + "Z",
             "coordinates": {"latitude": current_lat, "longitude": current_lng},
-            "snapped_segment_id": snapped_segment_id or veh["route_segment_id"],
+            "snapped_segment_id": target_seg_id,
             "snap_distance_meters": snap_dist_m,
             "defects_detected_count": len(defects),
             "defects": defects,
+            "ai_prediction": ai_pred,
+            "condition_score": round(new_health, 1),
+            "zone": new_zone,
             "evidence_id": ev_id,
             "live_stream_fps": 15.0
         }

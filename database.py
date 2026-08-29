@@ -1052,16 +1052,43 @@ class DatabaseManager:
         conn = sqlite3.connect(DB_PATH)
         try:
             cursor = conn.cursor()
+            
+            # Compute score and zone
+            c_score = seg_data.get("condition_score")
+            if c_score is None:
+                c_score = seg_data.get("health_score")
+            if c_score is not None:
+                try:
+                    c_score = float(c_score)
+                except (ValueError, TypeError):
+                    c_score = None
+                    
+            zone = seg_data.get("zone")
+            if not zone and c_score is not None:
+                if c_score < 40.0:
+                    zone = "RED"
+                elif c_score <= 70.0:
+                    zone = "YELLOW"
+                else:
+                    zone = "GREEN"
+            elif not zone:
+                zone = seg_data.get("condition_status", "GREEN")
+                if zone not in ["RED", "YELLOW", "GREEN"]:
+                    zone = "GREEN"
+
             cursor.execute('''
                 INSERT INTO gov_road_segments (
                     segment_id, road_name, road_type, highway_code, state, district, city, pincode,
                     jurisdiction_agency, length_km, polyline_json, center_lat, center_lng,
                     speed_limit_kmh, lanes, condition_status, health_score, confidence, iri_score, pci_score,
-                    vibration_gforce_peak, pothole_count, crack_count, last_surveyed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    vibration_gforce_peak, pothole_count, crack_count, last_surveyed_at,
+                    condition_score, zone
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(segment_id) DO UPDATE SET
                     condition_status = excluded.condition_status,
                     health_score = excluded.health_score,
+                    condition_score = excluded.condition_score,
+                    zone = excluded.zone,
                     confidence = excluded.confidence,
                     iri_score = excluded.iri_score,
                     pci_score = excluded.pci_score,
@@ -1086,15 +1113,17 @@ class DatabaseManager:
                 float(seg_data["center_lng"]),
                 int(seg_data.get("speed_limit_kmh", 50)),
                 int(seg_data.get("lanes", 4)),
-                seg_data.get("condition_status", "DATA_UNAVAILABLE"),
-                seg_data.get("health_score"),
+                seg_data.get("condition_status", zone),
+                c_score if c_score is not None else seg_data.get("health_score"),
                 float(seg_data.get("confidence", 0.0)),
                 seg_data.get("iri_score"),
                 seg_data.get("pci_score"),
                 float(seg_data.get("vibration_gforce_peak", 0.25)),
                 int(seg_data.get("pothole_count", 0)),
                 int(seg_data.get("crack_count", 0)),
-                seg_data.get("last_surveyed_at")
+                seg_data.get("last_surveyed_at"),
+                c_score,
+                zone
             ))
             conn.commit()
             return seg_data["segment_id"]

@@ -318,27 +318,29 @@ class RealTimeHealthEngine:
         fused_health = max(5.0, min(99.0, base_health - (total_penalties * 0.4)))
         fused_health = round(fused_health, 1)
 
-        # Color-coded Condition Classification
-        if fused_health >= 75.0:
+        # Color-coded Condition & Zone Classification
+        # RED < 40, YELLOW 40-70, GREEN > 70
+        if fused_health > 70.0:
             condition = "GREEN"
-            condition_label = "Good / Optimal Condition"
+            zone = "GREEN"
+            condition_label = "Optimal / Good Condition (Green Zone)"
             color_hex = "#10B981"
-        elif fused_health >= 55.0:
+        elif fused_health >= 40.0:
             condition = "YELLOW"
-            condition_label = "Moderate Wear (Improvement Recommended)"
+            zone = "YELLOW"
+            condition_label = "Moderate Wear / Maintainable (Yellow Zone)"
             color_hex = "#F59E0B"
-        elif fused_health >= 38.0:
-            condition = "ORANGE"
-            condition_label = "High Risk / Heavy Wear"
-            color_hex = "#F97316"
         else:
             condition = "RED"
-            condition_label = "Critical Damage (Emergency Repair)"
+            zone = "RED"
+            condition_label = "Critical Damage / Emergency Action (Red Zone)"
             color_hex = "#EF4444"
 
         return {
             "health_score": fused_health,
+            "condition_score": fused_health,
             "condition": condition,
+            "zone": zone,
             "condition_label": condition_label,
             "color_hex": color_hex,
             "penalties_breakdown": {
