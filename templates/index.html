@@ -10,8 +10,10 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Leaflet.js Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>if (typeof L === 'undefined') { document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>'); }</script>
     <!-- Custom Enhanced Styles -->
     <link rel="stylesheet" href="/static/style_enhanced.css">
 
@@ -355,7 +357,7 @@
             <!-- Left Column: Interactive Map -->
             <div class="lg:col-span-8 space-y-4">
                 <div id="indiaMapContainer">
-                    <div id="indiaMap"></div>
+                    <div id="indiaMap" style="width: 100%; height: 680px; min-height: 680px; background: #e2e8f0; border-radius: 18px;"></div>
 
                     <!-- Map Floating Legend -->
                     <div id="mapLegend">
@@ -1213,28 +1215,46 @@
         var selectedConditionFilter = 'ALL';
 
         function initGovMap() {
-            if (map) return;
-            map = L.map('indiaMap', {
-                center: [28.5700, 77.2400], // Centered on Delhi NCR
-                zoom: 12,
-                zoomControl: true
-            });
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors | RoadSense AI Gov Platform'
-            }).addTo(map);
-
-            // Dynamic OSM Fetching on Map Move / Drag / Zoom End
-            map.on('moveend', () => {
-                const c = map.getCenter();
-                loadGovRoadNetworkByCoords(c.lat, c.lng);
-            });
-
-            // Ensure Leaflet calculates viewport dimensions properly
-            setTimeout(() => {
+            if (map) {
                 map.invalidateSize();
-            }, 250);
+                return;
+            }
+            try {
+                map = L.map('indiaMap', {
+                    center: [28.5700, 77.2400], // Centered on Delhi NCR
+                    zoom: 12,
+                    zoomControl: true,
+                    preferCanvas: true
+                });
+
+                // Primary Tile Layer: OpenStreetMap Standard
+                const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors | RoadSense AI'
+                });
+
+                // Fallback Tile Layer: CartoDB Voyager (High contrast)
+                const cartoTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    attribution: '© CARTO | OpenStreetMap'
+                });
+
+                osmTiles.addTo(map);
+
+                // Handle tile error gracefully
+                osmTiles.on('tileerror', function() {
+                    if (!map.hasLayer(cartoTiles)) {
+                        map.removeLayer(osmTiles);
+                        cartoTiles.addTo(map);
+                    }
+                });
+
+                // Invalidate size on load
+                setTimeout(() => { if (map) map.invalidateSize(); }, 150);
+                setTimeout(() => { if (map) map.invalidateSize(); }, 600);
+            } catch(e) {
+                console.error("Map initialization error:", e);
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1245,6 +1265,7 @@
 
         // Load Road Network from API
         async function loadGovRoadNetwork(state = null, status = null) {
+            initGovMap();
             try {
                 let url = '/api/v3/gov/network?radius_km=60';
                 if (state && state !== 'ALL') url += `&state=${encodeURIComponent(state)}`;
@@ -1254,6 +1275,8 @@
                 const data = await res.json();
 
                 currentSegments = data.segments || [];
+                if (!map) initGovMap();
+                
                 renderRoadPolylines(currentSegments);
                 renderGovSidebarList(currentSegments);
 
@@ -1262,6 +1285,15 @@
                 }
             } catch (err) {
                 console.error("Failed to load road network:", err);
+                const container = document.getElementById('govRoadListContainer');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="p-6 text-center text-xs text-rose-600 font-mono">
+                            <span>⚠️ Network sync failed.</span>
+                            <button onclick="loadGovRoadNetwork()" class="block mx-auto mt-2 px-3 py-1 bg-rose-100 text-rose-800 rounded font-bold hover:bg-rose-200">Retry</button>
+                        </div>
+                    `;
+                }
             }
         }
 

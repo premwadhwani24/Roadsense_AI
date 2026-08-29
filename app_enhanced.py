@@ -1928,26 +1928,15 @@ def gov_road_network():
     status = request.args.get("status")
     pincode = request.args.get("pincode")
 
-    # 1. Fetch live OpenStreetMap roads for these exact coordinates dynamically
-    osm_roads = GISRoadNetworkEngine.query_live_osm_roads(lat=lat, lng=lng, radius_m=int(min(radius_km, 3.5) * 1000))
-
-    # 2. Fetch existing DB segments
+    # 1. Fetch existing DB segments instantly
     db_segments = DatabaseManager.get_gov_segments(state=state, district=district, city=city, status=status, pincode=pincode)
 
-    # Combine DB segments + OSM live segments (keyed by segment_id)
-    segments_map = {}
-    for s in db_segments:
-        segments_map[s["segment_id"]] = s
-
-    for s in osm_roads:
-        s_id = s["segment_id"]
-        if s_id not in segments_map:
-            segments_map[s_id] = s
-        else:
-            # Preserve DB condition status if available
-            segments_map[s_id]["polyline"] = s["polyline"]
-
-    combined_segments = list(segments_map.values())
+    # 2. If no DB segments or live OSM explicitly requested, query OSM as fallback
+    if not db_segments and request.args.get("live_osm") == "true":
+        osm_roads = GISRoadNetworkEngine.query_live_osm_roads(lat=lat, lng=lng, radius_m=int(min(radius_km, 3.5) * 1000))
+        combined_segments = osm_roads
+    else:
+        combined_segments = db_segments
 
     enriched_segments = []
     for seg in combined_segments:
