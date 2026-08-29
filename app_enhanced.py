@@ -1955,11 +1955,6 @@ def gov_road_network():
         center_lng = seg.get("center_lng", lng)
         d_km = haversine_km(lat, lng, center_lat, center_lng)
 
-        # Filter by status if specified
-        c_status = (seg.get("condition_status") or seg.get("condition") or "DATA_UNAVAILABLE").upper()
-        if status and status.upper() != "ALL" and c_status != status.upper():
-            continue
-
         # Get evidence records for this segment
         evidence = DatabaseManager.get_road_evidence(seg["segment_id"], limit=5)
 
@@ -1973,9 +1968,16 @@ def gov_road_network():
             last_inspected_at=seg.get("last_surveyed_at")
         )
 
+        c_status = eval_result["condition"].upper()
+        if status and status.upper() != "ALL" and c_status != status.upper() and seg.get("condition_status", "").upper() != status.upper():
+            continue
+
         seg_copy = dict(seg)
         seg_copy["distance_km"] = round(d_km, 2)
         seg_copy["condition"] = eval_result["condition"]
+        seg_copy["condition_status"] = eval_result["condition"]
+        seg_copy["zone"] = eval_result["condition"]
+        seg_copy["condition_score"] = eval_result["health_score"]
         seg_copy["condition_label"] = eval_result["condition_label"]
         seg_copy["health_score"] = eval_result["health_score"]
         seg_copy["color_hex"] = eval_result["color_hex"]

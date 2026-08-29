@@ -1270,63 +1270,93 @@
             roadPolylines.forEach(p => map.removeLayer(p));
             roadPolylines = [];
 
-            segments.forEach(seg => {
-                const cond = (seg.condition || seg.condition_status || 'DATA_UNAVAILABLE').toUpperCase();
-                let color = '#10b981'; // Green
-                let dashArray = null;
+            const bounds = L.latLngBounds();
 
-                if (cond === 'RED') {
+            segments.forEach(seg => {
+                const score = (seg.condition_score !== undefined && seg.condition_score !== null) 
+                    ? seg.condition_score 
+                    : ((seg.health_score !== undefined && seg.health_score !== null) ? seg.health_score : 50.0);
+                
+                const zone = (seg.zone || seg.condition || seg.condition_status || (score < 40.0 ? 'RED' : (score <= 70.0 ? 'YELLOW' : 'GREEN'))).toUpperCase();
+                
+                let color = '#10b981'; // Green (>70)
+                let weight = 6;
+                let dashArray = null;
+                let zoneTitle = '🟢 GREEN ZONE (>70) • OPTIMAL';
+
+                if (zone === 'RED' || score < 40.0) {
                     color = '#ef4444';
-                } else if (cond === 'YELLOW') {
+                    weight = 7;
+                    zoneTitle = '🔴 RED ZONE (<40) • CRITICAL HAZARD';
+                } else if (zone === 'YELLOW' || score <= 70.0) {
                     color = '#f59e0b';
-                } else if (cond === 'DATA_UNAVAILABLE') {
+                    weight = 6;
+                    zoneTitle = '🟡 YELLOW ZONE (40-70) • MODERATE';
+                } else if (zone === 'DATA_UNAVAILABLE') {
                     color = '#94a3b8';
                     dashArray = '6, 8';
+                    zoneTitle = '⚪ UNMONITORED CORRIDOR';
                 }
 
                 // 1. Draw Polyline if coordinates exist
                 if (seg.polyline && seg.polyline.length > 1) {
                     const polyline = L.polyline(seg.polyline, {
                         color: color,
-                        weight: 6,
-                        opacity: 0.85,
-                        dashArray: dashArray
+                        weight: weight,
+                        opacity: 0.9,
+                        dashArray: dashArray,
+                        lineCap: 'round',
+                        lineJoin: 'round'
                     }).addTo(map);
 
                     polyline.on('click', () => selectGovRoad(seg));
-                    polyline.bindTooltip(`<strong>${seg.road_name}</strong><br>Condition: ${cond}`, { sticky: true });
+                    polyline.bindTooltip(`
+                        <div style="font-family:'Inter',sans-serif; font-size:11px; padding:2px;">
+                            <strong style="font-size:12px; color:#0f172a;">${seg.road_name}</strong><br>
+                            <span style="display:inline-block; margin-top:2px; font-weight:700; color:${color};">${zoneTitle}</span><br>
+                            <span>Health Score: <strong>${Math.round(score)}/100</strong> • IRI: ${seg.iri_score || 1.8} m/km</span>
+                        </div>
+                    `, { sticky: true });
                     roadPolylines.push(polyline);
+                    bounds.extend(polyline.getBounds());
                 }
 
                 // 2. Draw Center Point Marker
-                const iconClass = cond === 'RED' ? 'red' : (cond === 'YELLOW' ? 'yellow' : (cond === 'GREEN' ? 'green' : 'uninspected'));
-                const iconSymbol = cond === 'RED' ? '!' : (cond === 'YELLOW' ? '⚡' : (cond === 'GREEN' ? '✓' : '?'));
+                if (seg.center_lat && seg.center_lng) {
+                    const iconClass = zone === 'RED' ? 'red' : (zone === 'YELLOW' ? 'yellow' : (zone === 'GREEN' ? 'green' : 'uninspected'));
+                    const iconSymbol = zone === 'RED' ? '!' : (zone === 'YELLOW' ? '⚡' : (zone === 'GREEN' ? '✓' : '?'));
 
-                const icon = L.divIcon({
-                    className: '',
-                    html: `<div class="rdd-marker ${iconClass}" style="width:28px; height:28px; font-size:12px;">${iconSymbol}</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
+                    const icon = L.divIcon({
+                        className: '',
+                        html: `<div class="rdd-marker ${iconClass}" style="width:28px; height:28px; font-size:12px; box-shadow:0 0 10px ${color}88;">${iconSymbol}</div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
 
-                const marker = L.marker([seg.center_lat, seg.center_lng], { icon: icon }).addTo(map);
-                marker.on('click', () => selectGovRoad(seg));
-                marker.bindPopup(`
-                    <div style="font-family:'Inter',sans-serif; min-width:210px;">
-                        <span style="font-size:9px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">${seg.segment_id}</span>
-                        <h4 style="font-weight:800; font-size:13px; margin:2px 0 4px 0; color:#0f172a;">${seg.road_name}</h4>
-                        <div style="font-size:11px; color:#475569; margin-bottom:6px;">${seg.city}, ${seg.state} • ${seg.road_type}</div>
-                        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
-                            <span>Status:</span>
-                            <strong style="color:${color};">${cond}</strong>
+                    const marker = L.marker([seg.center_lat, seg.center_lng], { icon: icon }).addTo(map);
+                    marker.on('click', () => selectGovRoad(seg));
+                    marker.bindPopup(`
+                        <div style="font-family:'Inter',sans-serif; min-width:220px; padding:4px;">
+                            <span style="font-size:9px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">${seg.segment_id}</span>
+                            <h4 style="font-weight:800; font-size:13px; margin:2px 0 4px 0; color:#0f172a;">${seg.road_name}</h4>
+                            <div style="font-size:11px; color:#475569; margin-bottom:6px;">${seg.city || 'New Delhi'}, ${seg.state || 'Delhi'} • ${seg.road_type || 'Arterial'}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:6px; background:#f8fafc; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+                                <span>Condition Score:</span>
+                                <strong style="color:${color}; font-size:13px;">${Math.round(score)} / 100 (${zone})</strong>
+                            </div>
+                            <button onclick="selectGovRoadById('${seg.segment_id}')" style="width:100%; padding:6px; background:#1d4ed8; color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(29,78,216,0.3);">
+                                Open Road Profile & Evidence
+                            </button>
                         </div>
-                        <button onclick="selectGovRoadById('${seg.segment_id}')" style="width:100%; margin-top:6px; padding:6px; background:#1d4ed8; color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">
-                            Open Road Profile
-                        </button>
-                    </div>
-                `);
-                roadPolylines.push(marker);
+                    `);
+                    roadPolylines.push(marker);
+                    bounds.extend([seg.center_lat, seg.center_lng]);
+                }
             });
+
+            if (bounds.isValid() && segments.length > 0) {
+                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+            }
         }
 
         // Render Sidebar List
