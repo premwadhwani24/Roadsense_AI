@@ -458,6 +458,31 @@ def seed_gov_road_network():
     from gis_road_network import GISRoadNetworkEngine
     import json
     
+    green_images = [
+        "/static/assets/damaged_roads/1_XoUpw9FGhfYh6Clpk_Wsbg-2x_jpg.rf.269bea6ceff5505771851fa8242fa6e0.jpg",
+        "/static/assets/damaged_roads/1_XoUpw9FGhfYh6Clpk_Wsbg-2x_jpg.rf.4c6411a8bdc890e1f19411f8e492cc39.jpg",
+        "/static/assets/damaged_roads/1_XoUpw9FGhfYh6Clpk_Wsbg-2x_jpg.rf.5f6e08bdff04a014fc7b3de605d363f1.jpg",
+        "/static/assets/damaged_roads/1_XoUpw9FGhfYh6Clpk_Wsbg-2x_jpg.rf.86b5937fd8c7d082e34aa9fe650e849c.jpg",
+    ]
+    yellow_images = [
+        "/static/assets/damaged_roads/crack1.jpg",
+        "/static/assets/damaged_roads/crack2.jpg",
+        "/static/assets/damaged_roads/alligator-cracks-1_jpg.rf.4d9f0f9bcf0bb53ffb4a6fa8087f9754.jpg",
+        "/static/assets/damaged_roads/bade gwalior.jpg",
+        "/static/assets/damaged_roads/baradari gwalior.jpg",
+    ]
+    red_images = [
+        "/static/assets/damaged_roads/pothole1.jpg",
+        "/static/assets/damaged_roads/potholes-cover.webp",
+        "/static/assets/damaged_roads/Naya bazar gwalior.jpg",
+        "/static/assets/damaged_roads/gwalior fort road.jpg",
+        "/static/assets/damaged_roads/damaged-asphalt-road-with-deep-pothole-american-highway-surface-ruined-roadway-urgent-need-repair_127089-31444.avif",
+        "/static/assets/damaged_roads/national highway delhi.webp",
+        "/static/assets/damaged_roads/guda gudi ka naka gwalior.jpg",
+        "/static/assets/damaged_roads/shitla road.avif",
+    ]
+    img_idx = 0
+
     for seg in GISRoadNetworkEngine.PAN_INDIA_REGISTRY:
         s_id = seg["segment_id"]
         # Determine authentic initial condition state
@@ -468,6 +493,7 @@ def seed_gov_road_network():
             pci = 94.0
             potholes = 0
             cracks = 0
+            proof_img = green_images[img_idx % len(green_images)]
         elif "02" in s_id:
             status = "YELLOW"
             health = 64.0
@@ -475,6 +501,7 @@ def seed_gov_road_network():
             pci = 66.0
             potholes = 2
             cracks = 3
+            proof_img = yellow_images[img_idx % len(yellow_images)]
         elif "03" in s_id:
             status = "RED"
             health = 32.0
@@ -482,6 +509,7 @@ def seed_gov_road_network():
             pci = 32.0
             potholes = 9
             cracks = 8
+            proof_img = red_images[img_idx % len(red_images)]
         else:
             status = "DATA_UNAVAILABLE"
             health = None
@@ -489,14 +517,16 @@ def seed_gov_road_network():
             pci = None
             potholes = 0
             cracks = 0
+            proof_img = ""
+        img_idx += 1
 
         cursor.execute('''
             INSERT INTO gov_road_segments (
                 segment_id, road_name, road_type, highway_code, state, district, city, pincode,
                 jurisdiction_agency, length_km, polyline_json, center_lat, center_lng,
                 speed_limit_kmh, lanes, condition_status, health_score, confidence, iri_score, pci_score,
-                vibration_gforce_peak, pothole_count, crack_count, last_surveyed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                vibration_gforce_peak, pothole_count, crack_count, proof_image_url, last_surveyed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ''', (
             seg["segment_id"], seg["road_name"], seg["road_type"], seg["highway_code"],
             seg["state"], seg["district"], seg["city"], seg["pincode"],
@@ -504,7 +534,7 @@ def seed_gov_road_network():
             seg["center_lat"], seg["center_lng"], seg["speed_limit_kmh"], seg["lanes"],
             status, health, 0.92 if status != 'DATA_UNAVAILABLE' else 0.0,
             iri, pci, 0.28 if status == 'GREEN' else (1.45 if status == 'YELLOW' else 4.10),
-            potholes, cracks
+            potholes, cracks, proof_img
         ))
 
     conn.commit()
@@ -1252,32 +1282,6 @@ class DatabaseManager:
                         r["defects"] = json.loads(r["defects_detected_json"])
                     except:
                         r["defects"] = []
-            if not rows:
-                dataset_photos = [
-                    "/static/assets/damaged_roads/national highway delhi.webp",
-                    "/static/assets/damaged_roads/Naya bazar gwalior.jpg",
-                    "/static/assets/damaged_roads/gwalior fort road.jpg",
-                    "/static/assets/damaged_roads/pune mahasatra.jpg",
-                    "/static/assets/damaged_roads/damaged-asphalt-road-with-deep-pothole-american-highway-surface-ruined-roadway-urgent-need-repair_127089-31444.avif",
-                    "/static/assets/damaged_roads/21_11_2023-chamber_o.jpg",
-                    "/static/assets/damaged_roads/aamko gwalior.jpg",
-                    "/static/assets/damaged_roads/guda gudi ka naka gwalior.jpg",
-                    "/static/assets/damaged_roads/shitla road.avif"
-                ]
-                h = abs(hash(segment_id))
-                img_url = dataset_photos[h % len(dataset_photos)]
-                return [{
-                    "evidence_id": f"EV-DS-{h % 10000:04d}",
-                    "segment_id": segment_id,
-                    "latitude": 28.6139,
-                    "longitude": 77.2090,
-                    "source_type": "DAMAGE_ROAD_DATASET",
-                    "device_id": "ROAD-DATASET-CAM-01",
-                    "image_url": img_url,
-                    "confidence": 0.95,
-                    "defects": [{"label": "Pothole", "confidence": 95.0, "severity": "CRITICAL", "measurements": {"estimated_depth_cm": 6.5, "surface_area_sq_m": 1.25}}]
-                }]
-
             return rows
         finally:
             conn.close()

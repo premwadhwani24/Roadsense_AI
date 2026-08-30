@@ -52,12 +52,20 @@ except Exception as e:
     dossier_engine = None
     print(f"Could not initialize GovernmentDossierEngine: {e}")
 
+# Import image analysis service for real-time defect detection
+try:
+    from image_analysis_service import ImageAnalysisService, get_image_analysis_service
+    image_analysis_service = get_image_analysis_service()
+    print("[OK] ImageAnalysisService initialized successfully - Real image analysis enabled!")
+except Exception as e:
+    image_analysis_service = None
+    print(f"[WARN] Could not initialize ImageAnalysisService: {e}")
+
 try:
     import pandas as pd
 except:
     pd = None
 
-# Configuration
 GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
 OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
 TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
@@ -2682,8 +2690,81 @@ def export_gov_dossier_geojson(segment_id):
         return jsonify({"error": str(e)}), 500
 
 
+# ====================================================================================
+# PHASE 10: REAL-TIME IMAGE ANALYSIS & DEFECT DETECTION (REPLACES HARDCODED MARKS)
+# ====================================================================================
+
+@app.route("/api/image/analyze_dataset", methods=["POST"])
+def api_analyze_dataset():
+    """Real-time analysis: scan all road images with actual defect detection"""
+    if not image_analysis_service:
+        return jsonify({"error": "Image analysis service not available"}), 503
+    try:
+        logger.info("🔍 Starting dataset analysis...")
+        stats, summaries = image_analysis_service.process_full_dataset()
+        roads_by_condition = {"CRITICAL": [], "HIGH": [], "MEDIUM": [], "LOW": [], "NORMAL": []}
+        for road_id, summary in summaries.items():
+            severity = summary.get("severity", "NORMAL")
+            roads_by_condition[severity].append({
+                "road_id": road_id, "zone": summary.get("zone"),
+                "defects": summary.get("defect_count"),
+                "potholes": summary.get("pothole_count"),
+                "cracks": summary.get("crack_count"),
+                "confidence": summary.get("confidence_avg"),
+                "proof_images": summary.get("proof_images", [])[:3]
+            })
+        return jsonify({
+            "status": "success", "statistics": {
+                "total_images": stats["total_images_processed"],
+                "defects_found": stats["total_defects_found"],
+                "critical_roads": len(roads_by_condition["CRITICAL"]),
+                "high_priority": len(roads_by_condition["HIGH"])
+            },
+            "roads_by_severity": roads_by_condition, "timestamp": datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        logger.error(f"Analysis failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/image/road_status/<road_id>", methods=["GET"])
+def api_road_image_status(road_id):
+    """Get real-time road condition from analyzed images"""
+    if not image_analysis_service:
+        return jsonify({"error": "Image analysis service not available"}), 503
+    try:
+        status = image_analysis_service.get_road_condition_status(road_id)
+        if status:
+            return jsonify({
+                "status": "success", "road_id": road_id,
+                "condition": {
+                    "zone": status.get("overall_status"),
+                    "severity": status.get("overall_severity"),
+                    "confidence": status.get("confidence_avg"),
+                    "defect_count": status.get("defect_count"),
+                    "breakdown": {
+                        "potholes": status.get("pothole_count"),
+                        "cracks": status.get("crack_count"),
+                        "normal": status.get("normal_count")
+                    },
+                    "proof_images": status.get("proof_images", [])[:5]
+                },
+                "analyzed_at": status.get("analyzed_at")
+            }), 200
+        return jsonify({"status": "not_analyzed", "road_id": road_id}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     logger.info("Starting RoadSense Enhanced Backend")
+    logger.info("=" * 60)
+    logger.info("IMAGE ANALYSIS & REAL-TIME DEFECT DETECTION")
+    logger.info("=" * 60)
+    if image_analysis_service:
+        logger.info("✓ Image Analysis Service: ACTIVE")
+        logger.info("  - POST /api/image/analyze_dataset - Scan all road images")
+        logger.info("  - GET /api/image/road_status/<road_id> - Get road condition")
+    logger.info("=" * 60)
     app.run(host="0.0.0.0", port=5000, debug=True)
 
 

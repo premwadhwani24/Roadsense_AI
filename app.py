@@ -42,9 +42,9 @@ except Exception as e:
 # ---------------------------------------------------------------------------
 # Configuration (set via env vars in production). Defaults here are for demo.
 # ---------------------------------------------------------------------------
-GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "AIzaSyAB_78cxWOzcKE_ezj6dm9Y77CxwzetdPY")  # user-provided earlier
-OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "FUqgtGuXcXH29r79l6qLbg==vJxb4tDrWVQX6Zxk")  # user-provided earlier (assumed)
-TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")  # if empty, code will use mock traffic
+GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
+OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
 CARTO_API_KEY = os.environ.get("CARTO_API_KEY", "cb1_2k8n_1_26eca1d9286363e9242b4224")
 USE_MOCK_IF_NO_KEYS = True  # allow local mock data when external keys missing
 
