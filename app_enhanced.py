@@ -61,6 +61,7 @@ except:
 GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
 OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
 TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
+CARTO_API_KEY = os.environ.get("CARTO_API_KEY", "cb1_2k8n_1_26eca1d9286363e9242b4224")
 USE_MOCK_IF_NO_KEYS = True
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', "")
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', "")
@@ -116,7 +117,7 @@ def landing():
 @app.route('/index')
 def index_page():
     """Serve the original index dashboard page"""
-    return render_template('index.html')
+    return render_template('index.html', carto_api_key=CARTO_API_KEY)
 
 @app.route("/dashboard")
 @jwt_required()

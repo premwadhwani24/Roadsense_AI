@@ -1275,12 +1275,14 @@
             }
         }) : null;
 
+        var CARTO_API_KEY = "{{ carto_api_key|default('cb1_2k8n_1_26eca1d9286363e9242b4224') }}";
+
         function getTileLayer(provider) {
             if (provider === 'carto') {
-                return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                return L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=${CARTO_API_KEY}`, {
                     maxZoom: 19,
                     subdomains: 'abcd',
-                    attribution: '© CARTO | OpenStreetMap'
+                    attribution: '© CARTO Basemaps | OpenStreetMap'
                 });
             } else if (provider === 'osm') {
                 return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
