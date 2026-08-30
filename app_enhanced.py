@@ -1978,6 +1978,13 @@ def gov_road_network():
         seg_copy["penalties"] = eval_result["penalties"]
         seg_copy["explanation"] = eval_result["explanation"]
 
+        # Attach proof image URL from evidence or database
+        if not seg_copy.get("proof_image_url"):
+            if evidence and len(evidence) > 0:
+                seg_copy["proof_image_url"] = evidence[0].get("image_url", "")
+            else:
+                seg_copy["proof_image_url"] = ""
+
         enriched_segments.append(seg_copy)
 
     enriched_segments.sort(key=lambda x: x.get("distance_km", 0))

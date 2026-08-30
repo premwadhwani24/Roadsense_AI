@@ -249,8 +249,8 @@ def init_database():
         )
     ''')
 
-    # Add dynamic condition_score and zone columns if not present
-    for col_sql in ["condition_score REAL", "zone TEXT DEFAULT 'GREEN'"]:
+    # Add dynamic condition_score, zone and proof_image_url columns if not present
+    for col_sql in ["condition_score REAL", "zone TEXT DEFAULT 'GREEN'", "proof_image_url TEXT"]:
         try:
             cursor.execute(f"ALTER TABLE gov_road_segments ADD COLUMN {col_sql}")
         except sqlite3.OperationalError:

@@ -1427,6 +1427,34 @@
             roadPolylines.forEach(p => map.removeLayer(p));
             roadPolylines = [];
 
+            // Update Dynamic KPIs
+            let mappedSegments = segments.length;
+            let totalKm = segments.reduce((acc, seg) => acc + (seg.length_km || 1.0), 0);
+            let greenCount = 0; let yellowCount = 0; let redCount = 0; let potholeBacklog = 0;
+            segments.forEach(seg => {
+                const score = (seg.condition_score !== undefined && seg.condition_score !== null) 
+                    ? seg.condition_score : ((seg.health_score !== undefined && seg.health_score !== null) ? seg.health_score : 50.0);
+                const zone = (seg.zone || seg.condition || seg.condition_status || (score < 40.0 ? 'RED' : (score <= 70.0 ? 'YELLOW' : 'GREEN'))).toUpperCase();
+                if (zone === 'GREEN') greenCount++;
+                else if (zone === 'YELLOW') yellowCount++;
+                else if (zone === 'RED' || score < 40.0) redCount++;
+                if (seg.pothole_count) potholeBacklog += seg.pothole_count;
+            });
+            let greenPct = mappedSegments > 0 ? ((greenCount / mappedSegments) * 100).toFixed(1) : 0;
+            let savingsLakhs = (yellowCount * 1.45).toFixed(1);
+            
+            let elMapped = document.getElementById('kpiMappedSegments');
+            if(elMapped) {
+                elMapped.innerText = mappedSegments;
+                elMapped.nextElementSibling.innerText = `${totalKm.toFixed(1)} Route KM`;
+                document.getElementById('kpiGreenSegments').innerText = greenCount;
+                document.getElementById('kpiGreenSegments').nextElementSibling.innerText = `${greenPct}% Network`;
+                document.getElementById('kpiYellowSegments').innerText = yellowCount;
+                document.getElementById('kpiRedSegments').innerText = redCount;
+                document.getElementById('kpiPotholeBacklog').innerText = potholeBacklog;
+                document.getElementById('kpiSavingsINR').innerText = `₹${savingsLakhs} L`;
+            }
+
             const bounds = L.latLngBounds();
 
             segments.forEach(seg => {
@@ -1492,14 +1520,24 @@
 
                     const marker = L.marker([seg.center_lat, seg.center_lng], { icon: icon }).addTo(map);
                     marker.on('click', () => selectGovRoad(seg));
+
+                    const proofImg = seg.proof_image_url || seg.image_url || '';
+                    const proofImgHtml = proofImg ? `<img src="${proofImg}" style="width:100%; height:90px; object-fit:cover; border-radius:6px; margin-bottom:6px; border:1px solid #e2e8f0;" alt="Road Condition Proof" onerror="this.style.display='none'">` : '';
+
                     marker.bindPopup(`
-                        <div style="font-family:'Inter',sans-serif; min-width:220px; padding:4px;">
+                        <div style="font-family:'Inter',sans-serif; min-width:240px; padding:4px;">
+                            ${proofImgHtml}
                             <span style="font-size:9px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">${seg.segment_id}</span>
                             <h4 style="font-weight:800; font-size:13px; margin:2px 0 4px 0; color:#0f172a;">${seg.road_name}</h4>
                             <div style="font-size:11px; color:#475569; margin-bottom:6px;">${seg.city || 'New Delhi'}, ${seg.state || 'Delhi'} • ${seg.road_type || 'Arterial'}</div>
                             <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:6px; background:#f8fafc; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
                                 <span>Condition Score:</span>
                                 <strong style="color:${color}; font-size:13px;">${Math.round(score)} / 100 (${zone})</strong>
+                            </div>
+                            <div style="display:flex; gap:6px; font-size:10px; margin-bottom:6px; color:#64748b;">
+                                <span>IRI: <strong>${seg.iri_score || 'N/A'}</strong></span>
+                                <span>Potholes: <strong>${seg.pothole_count || 0}</strong></span>
+                                <span>Cracks: <strong>${seg.crack_count || 0}</strong></span>
                             </div>
                             <button onclick="selectGovRoadById('${seg.segment_id}')" style="width:100%; padding:6px; background:#1d4ed8; color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(29,78,216,0.3);">
                                 Open Road Profile & Evidence
@@ -1553,6 +1591,10 @@
                             <span>IRI: <strong>${seg.iri_score || 'N/A'}</strong></span>
                             <span>Lanes: <strong>${seg.lanes || 4}</strong></span>
                         </div>
+                        ${(seg.proof_image_url || seg.image_url) ? `
+                        <div class="mt-2 rounded-lg overflow-hidden h-16 bg-slate-100 border border-slate-200">
+                            <img src="${seg.proof_image_url || seg.image_url}" class="w-full h-full object-cover" alt="Road Condition" onerror="this.parentElement.style.display='none'">
+                        </div>` : ''}
                     </div>
                 `;
             }).join('');
