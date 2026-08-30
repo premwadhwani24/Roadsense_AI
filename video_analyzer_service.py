@@ -6,6 +6,9 @@ Processes MP4, AVI, WebM, MOV dashcam and patrol vehicle video clips.
 Extracts periodic video frames using OpenCV, executes batch neural inference with
 the trained ResNet-18 model, calculates temporal road condition trajectories,
 and generates interactive defect timeline events.
+
+Dashcam Video Dataset Source Link:
+https://www.istockphoto.com/video/close-up-view-of-a-dangerous-pothole-on-an-asphalt-road-gm2269239566-681797458
 """
 
 import os

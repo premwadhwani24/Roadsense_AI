@@ -333,6 +333,10 @@ The RoadSense AI platform includes complete **real-world production deployment f
   - `Normal`: 232 samples
 - **Dataset Manifest**: `dataset_manifest.csv` (1,787 training samples [80%], 448 validation samples [20%])
 
+### 📹 Dashcam Video Footage & Defect Dataset Source:
+- **Dashcam Video Dataset Source Link**: [iStock Dangerous Pothole Asphalt Road Footage (gm2269239566-681797458)](https://www.istockphoto.com/video/close-up-view-of-a-dangerous-pothole-on-an-asphalt-road-gm2269239566-681797458)
+- **Application**: Used for real-time temporal ResNet-18 frame extraction, OpenCV video stream processing, and interactive dashcam timeline analyzer (`video_analyzer_service.py`).
+
 ### 🔬 Architecture & Model:
 - **Backbone**: `RoadDefectResNet` (Pure PyTorch ResNet-18 implementation in `road_defect_model.py`).
 - **Features**: Fast PIL transforms, data augmentation (horizontal flip, random rotation, brightness jitter), ImageNet normalization.
