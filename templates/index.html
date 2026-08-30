@@ -1931,7 +1931,7 @@
             }
         }
 
-        function simulateVehicleCameraIngest() {
+        async function simulateVehicleCameraIngest() {
             if (!activeSegment) return;
 
             try {
@@ -2004,11 +2004,17 @@
 
         function initGovSSE() {
             if (typeof EventSource !== 'undefined') {
-                const src = new EventSource('/api/v3/realtime/stream');
-                src.onmessage = (event) => {
-                    const d = JSON.parse(event.data);
-                    document.getElementById('govSSEStatus').innerText = `LIVE TELEMETRY (${d.instantaneous_gforce_reading}g)`;
-                };
+                try {
+                    const src = new EventSource('/api/v3/realtime/stream');
+                    src.onmessage = (event) => {
+                        try {
+                            const d = JSON.parse(event.data);
+                            const el = document.getElementById('govSSEStatus');
+                            if (el) el.innerText = `LIVE TELEMETRY (${d.instantaneous_gforce_reading}g)`;
+                        } catch(e) {}
+                    };
+                    src.onerror = () => { src.close(); };
+                } catch(e) {}
             }
         }
     </script>
