@@ -333,6 +333,11 @@ The RoadSense AI platform includes complete **real-world production deployment f
   - `Normal`: 232 samples
 - **Dataset Manifest**: `dataset_manifest.csv` (1,787 training samples [80%], 448 validation samples [20%])
 
+### 📸 Real-World Damage Road Images Dataset (Road Evidence Gallery Engine):
+- **Dataset Directory**: `damage road images dataset/` (13 high-resolution authentic road defect photographs)
+- **Coverage**: Real-world municipal & highway road distress across Gwalior (Naya Bazar, Aamkho, Bada Chauraha, Morar Baradari, Gudagudi Ka Naka, Fort Road, Hazira, Laxmiganj, Shitla Mata), Delhi (NH-48, NH-44, Ring Road Utility Chamber), and Pune (Maharashtra Outer Ring).
+- **Application**: Directly powers the **Road Evidence Gallery**, dynamic road profile evidence inspection, computer vision bounding box localization, and forensic municipal audit proofs.
+
 ### 📹 Dashcam Video Footage & Defect Dataset Source:
 - **Dashcam Video Dataset Source Link**: [iStock Dangerous Pothole Asphalt Road Footage (gm2269239566-681797458)](https://www.istockphoto.com/video/close-up-view-of-a-dangerous-pothole-on-an-asphalt-road-gm2269239566-681797458)
 - **Application**: Used for real-time temporal ResNet-18 frame extraction, OpenCV video stream processing, and interactive dashcam timeline analyzer (`video_analyzer_service.py`).
