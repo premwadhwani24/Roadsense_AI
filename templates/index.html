@@ -9,11 +9,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Leaflet.js Map -->
+    <!-- Leaflet.js Map (Local Vendor Primary + CDN Backup) -->
+    <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script>if (typeof L === 'undefined') { document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>'); }</script>
+    <script src="/static/vendor/leaflet/leaflet.js"></script>
+    <script>
+        if (typeof L === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>');
+        }
+    </script>
     <!-- Custom Enhanced Styles -->
     <link rel="stylesheet" href="/static/style_enhanced.css">
 
@@ -357,7 +361,16 @@
             <!-- Left Column: Interactive Map -->
             <div class="lg:col-span-8 space-y-4">
                 <div id="indiaMapContainer">
-                    <div id="indiaMap" style="width: 100%; height: 680px; min-height: 680px; background: #e2e8f0; border-radius: 18px;"></div>
+                    <div id="indiaMap" style="width: 100%; height: 680px; min-height: 680px; background: #0f172a; border-radius: 18px;"></div>
+
+                    <!-- Map Floating Layer Controls Bar -->
+                    <div id="mapControlsBar" class="absolute top-4 right-4 z-[1000] flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700 shadow-xl">
+                        <button id="btnTileCarto" onclick="switchTileProvider('carto')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow-sm transition">🗺️ Map</button>
+                        <button id="btnTileOsm" onclick="switchTileProvider('osm')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🌍 OSM</button>
+                        <button id="btnTileEsri" onclick="switchTileProvider('esri')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🛰️ Satellite</button>
+                        <button id="btnTileCanvas" onclick="switchTileProvider('canvas')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">📐 GIS Grid</button>
+                        <button onclick="recenterGovMap()" class="px-2.5 py-1 rounded-xl text-[11px] font-bold text-amber-400 bg-slate-800 hover:bg-slate-700 transition" title="Recenter Map View">🎯 Fit Corridors</button>
+                    </div>
 
                     <!-- Map Floating Legend -->
                     <div id="mapLegend">
@@ -1208,15 +1221,117 @@
     <script>
         // Global State (var for cross-script-block accessibility)
         var map;
+        var currentTileLayer = null;
+        var activeTileProvider = 'carto';
         var roadPolylines = [];
         var defectMarkers = [];
         var currentSegments = [];
         var activeSegment = null;
         var selectedConditionFilter = 'ALL';
 
+        // Custom Offline/Fallback GIS Vector Grid Layer
+        var GISGridLayer = (typeof L !== 'undefined' && L.GridLayer) ? L.GridLayer.extend({
+            createTile: function (coords) {
+                var tile = document.createElement('canvas');
+                var tileSize = this.getTileSize();
+                tile.width = tileSize.x;
+                tile.height = tileSize.y;
+                var ctx = tile.getContext('2d');
+
+                // Dark GIS Background
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, tileSize.x, tileSize.y);
+
+                // Grid Lines
+                ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+                ctx.lineWidth = 1;
+
+                const step = 64;
+                for (let x = 0; x <= tileSize.x; x += step) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0); ctx.lineTo(x, tileSize.y);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= tileSize.y; y += step) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y); ctx.lineTo(tileSize.x, y);
+                    ctx.stroke();
+                }
+
+                // Grid Crosshairs
+                ctx.fillStyle = '#38bdf8';
+                for (let x = 0; x <= tileSize.x; x += step) {
+                    for (let y = 0; y <= tileSize.y; y += step) {
+                        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+                    }
+                }
+
+                // Coordinate watermark
+                ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+                ctx.font = 'bold 9px monospace';
+                ctx.fillText(`GIS GRID z:${coords.z} [${coords.x},${coords.y}]`, 8, 16);
+
+                return tile;
+            }
+        }) : null;
+
+        function getTileLayer(provider) {
+            if (provider === 'carto') {
+                return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    subdomains: 'abcd',
+                    attribution: '© CARTO | OpenStreetMap'
+                });
+            } else if (provider === 'osm') {
+                return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                });
+            } else if (provider === 'esri') {
+                return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: '© Esri | RoadSense AI'
+                });
+            } else {
+                if (GISGridLayer) {
+                    return new GISGridLayer({ maxZoom: 19 });
+                } else {
+                    return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+                }
+            }
+        }
+
+        function switchTileProvider(provider) {
+            activeTileProvider = provider;
+            if (!map) return;
+
+            if (currentTileLayer) {
+                map.removeLayer(currentTileLayer);
+            }
+
+            currentTileLayer = getTileLayer(provider);
+            currentTileLayer.addTo(map);
+
+            // Update UI buttons
+            ['Carto', 'Osm', 'Esri', 'Canvas'].forEach(name => {
+                const btn = document.getElementById('btnTile' + name);
+                if (btn) {
+                    if (name.toLowerCase() === provider) {
+                        btn.className = 'px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow-sm transition';
+                    } else {
+                        btn.className = 'px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition';
+                    }
+                }
+            });
+        }
+
         function initGovMap() {
             if (map) {
                 map.invalidateSize();
+                return;
+            }
+            if (typeof L === 'undefined') {
+                console.error("Leaflet L is undefined.");
                 return;
             }
             try {
@@ -1227,34 +1342,42 @@
                     preferCanvas: true
                 });
 
-                // Primary Tile Layer: OpenStreetMap Standard
-                const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '© OpenStreetMap contributors | RoadSense AI'
-                });
+                // Add primary tile layer
+                switchTileProvider('carto');
 
-                // Fallback Tile Layer: CartoDB Voyager (High contrast)
-                const cartoTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 19,
-                    attribution: '© CARTO | OpenStreetMap'
-                });
+                // Fallback if tile errors occur
+                if (currentTileLayer) {
+                    currentTileLayer.on('tileerror', function() {
+                        console.warn("Tile load error on primary layer, trying OSM fallback...");
+                        if (activeTileProvider !== 'osm' && activeTileProvider !== 'canvas') {
+                            switchTileProvider('osm');
+                        }
+                    });
+                }
 
-                osmTiles.addTo(map);
-
-                // Handle tile error gracefully
-                osmTiles.on('tileerror', function() {
-                    if (!map.hasLayer(cartoTiles)) {
-                        map.removeLayer(osmTiles);
-                        cartoTiles.addTo(map);
-                    }
-                });
-
-                // Invalidate size on load
-                setTimeout(() => { if (map) map.invalidateSize(); }, 150);
-                setTimeout(() => { if (map) map.invalidateSize(); }, 600);
+                // Force invalidateSize multiple times to handle container animations/renders
+                setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+                setTimeout(() => { if (map) map.invalidateSize(); }, 400);
+                setTimeout(() => { if (map) map.invalidateSize(); }, 1000);
             } catch(e) {
                 console.error("Map initialization error:", e);
             }
+        }
+
+        function recenterGovMap() {
+            if (!map) return;
+            if (roadPolylines && roadPolylines.length > 0) {
+                const bounds = L.latLngBounds();
+                roadPolylines.forEach(layer => {
+                    if (layer.getBounds) bounds.extend(layer.getBounds());
+                    else if (layer.getLatLng) bounds.extend(layer.getLatLng());
+                });
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+                    return;
+                }
+            }
+            map.flyTo([28.5700, 77.2400], 12, { duration: 1.2 });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
