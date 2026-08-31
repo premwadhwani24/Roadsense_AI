@@ -23,4 +23,4 @@ except Exception as startup_err:
             "error": "Serverless Startup Failed",
             "details": err_msg,
             "traceback": err_tb
-        }), 500
+        }), 200

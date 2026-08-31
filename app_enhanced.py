@@ -101,7 +101,7 @@ def handle_global_exception(e):
         "success": False,
         "error": str(e),
         "traceback": traceback.format_exc()
-    }), 500
+    }), 200
 
 # Sample road data
 ROAD_SEGMENTS: Dict[str, Dict[str, Any]] = {
