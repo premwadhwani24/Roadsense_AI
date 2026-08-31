@@ -22,7 +22,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, set_acce
 from dotenv import load_dotenv
 load_dotenv()
 
-from database import init_database, DatabaseManager
+from database import init_database, DatabaseManager, DB_PATH
 from auth import setup_auth, authenticate_user, register_user, check_user_role
 from notifications import NotificationManager
 from prediction_engine import RoadPredictionEngine
@@ -328,7 +328,7 @@ def create_alert():
 @check_user_role('engineer')
 def resolve_alert(alert_id):
     """Mark alert as resolved"""
-    conn = sqlite3.connect('roadsense.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         cursor = conn.cursor()
         cursor.execute('UPDATE alerts SET status = ?, resolved_at = ? WHERE id = ?',
@@ -380,7 +380,7 @@ def update_work_order(work_order_id):
     status = data.get("status")  # pending, in_progress, completed
     actual_cost = data.get("actual_cost")
     
-    conn = sqlite3.connect('roadsense.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         cursor = conn.cursor()
         
@@ -540,7 +540,7 @@ def get_citizen_reports():
 @check_user_role('engineer')
 def verify_citizen_report(report_id):
     """Verify citizen report"""
-    conn = sqlite3.connect('roadsense.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -563,7 +563,7 @@ def get_city_budget(city):
     """Get budget info for a city"""
     year = request.args.get("year", default=datetime.now().year, type=int)
     
-    conn = sqlite3.connect('roadsense.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -586,7 +586,7 @@ def set_city_budget(city):
     year = data.get("year", datetime.now().year)
     allocated_budget = data.get("allocated_budget")
     
-    conn = sqlite3.connect('roadsense.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -721,7 +721,7 @@ def get_budget_prediction(city):
     try:
         # Get all roads in the city
         roads = []
-        conn = sqlite3.connect('roadsense.db')
+        conn = sqlite3.connect(DB_PATH)
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT DISTINCT road_id FROM alerts WHERE city = ?", (city,))
@@ -1015,7 +1015,7 @@ def submit_voice_report():
     claims = get_jwt()
     user_id = claims.get("user_id")
     
-    conn = sqlite3.connect('roadsense.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         cursor = conn.cursor()
         cursor.execute('''

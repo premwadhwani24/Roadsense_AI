@@ -3,7 +3,7 @@ import json
 import sqlite3
 from typing import Dict, Any
 
-DB_PATH = "roadsense.db"
+from database import DB_PATH
 
 class BlockchainLedger:
     """

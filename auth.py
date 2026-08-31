@@ -90,9 +90,8 @@ def authenticate_user(username: str, password: str):
     if not check_password_hash(user['password_hash'], password):
         return None, "Invalid credentials"
     
-    # Update last login
-    import sqlite3
-    conn = sqlite3.connect('roadsense.db')
+    from database import DB_PATH
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('UPDATE users SET last_login = ? WHERE id = ?', 
                   (datetime.now(), user['id']))

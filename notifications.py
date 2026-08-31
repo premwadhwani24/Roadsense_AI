@@ -71,9 +71,8 @@ class NotificationManager:
         """Create alert for critical road condition"""
         alert_id = DatabaseManager.add_alert(road_id, road_name, severity, description)
         
-        # Get all engineers/admins
-        import sqlite3
-        conn = sqlite3.connect('roadsense.db')
+        from database import DB_PATH
+        conn = sqlite3.connect(DB_PATH)
         try:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -131,8 +130,8 @@ class NotificationManager:
     @staticmethod
     def notify_repair_completion(work_order_id: int, user_id: int):
         """Notify stakeholders of repair completion"""
-        import sqlite3
-        conn = sqlite3.connect('roadsense.db')
+        from database import DB_PATH
+        conn = sqlite3.connect(DB_PATH)
         try:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()

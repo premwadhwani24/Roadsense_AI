@@ -2,7 +2,7 @@ import sqlite3
 import random
 from typing import Dict, Any
 
-DB_PATH = "roadsense.db"
+from database import DB_PATH
 
 class DigitalTwinEngine:
     """

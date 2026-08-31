@@ -14,8 +14,9 @@ import random
 class RoadPredictionEngine:
     """AI Engine for predicting road conditions and accident risk"""
     
-    def __init__(self, db_path: str = 'roadsense.db'):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        from database import DB_PATH
+        self.db_path = db_path if db_path else DB_PATH
 
     def calculate_material_risk_score(self, traffic_factor: float, rain_mm: float, 
                                      material_degradation_factor: float, road_material: str = "Asphalt") -> Dict:
