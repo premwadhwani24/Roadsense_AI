@@ -1,26 +1,24 @@
 import os
 import sys
-import traceback
 
 # Add root project directory to Python path
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-try:
-    from app_enhanced import app
-except Exception as startup_err:
-    from flask import Flask, jsonify
-    app = Flask(__name__)
-    err_msg = str(startup_err)
-    err_tb = traceback.format_exc()
+from app_enhanced import app
 
-    @app.route("/", defaults={"path": ""})
-    @app.route("/<path:path>")
-    def catch_all_startup_error(path):
-        return jsonify({
-            "success": False,
-            "error": "Serverless Startup Failed",
-            "details": err_msg,
-            "traceback": err_tb
-        }), 200
+class VercelPathMiddleware:
+    """WSGI Middleware to strip Vercel serverless rewrite prefixes from PATH_INFO"""
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        path = environ.get('PATH_INFO', '')
+        if path.startswith('/api/index.py'):
+            environ['PATH_INFO'] = path[len('/api/index.py'):] or '/'
+        elif path.startswith('/api/index'):
+            environ['PATH_INFO'] = path[len('/api/index'):] or '/'
+        return self.wsgi_app(environ, start_response)
+
+app.wsgi_app = VercelPathMiddleware(app.wsgi_app)
