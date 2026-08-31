@@ -93,6 +93,16 @@ def error_response(message: str, status_code: int = 400):
     """Utility function for standardized error responses"""
     return jsonify({"success": False, "error": message}), status_code
 
+@app.errorhandler(Exception)
+def handle_global_exception(e):
+    import traceback
+    logger.error(f"Unhandled Exception: {e}\n{traceback.format_exc()}")
+    return jsonify({
+        "success": False,
+        "error": str(e),
+        "traceback": traceback.format_exc()
+    }), 500
+
 # Sample road data
 ROAD_SEGMENTS: Dict[str, Dict[str, Any]] = {
     "R001": {"name": "NH-52 Segment A", "coords": (26.2183, 78.1828), "state": "Madhya Pradesh", 
