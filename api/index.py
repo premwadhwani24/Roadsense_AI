@@ -9,16 +9,18 @@ if root_dir not in sys.path:
 from app_enhanced import app
 
 class VercelPathMiddleware:
-    """WSGI Middleware to strip Vercel serverless rewrite prefixes from PATH_INFO"""
+    """WSGI Middleware to strip Vercel serverless rewrite prefixes from SCRIPT_NAME and PATH_INFO"""
     def __init__(self, wsgi_app):
         self.wsgi_app = wsgi_app
 
     def __call__(self, environ, start_response):
+        environ['SCRIPT_NAME'] = ''
         path = environ.get('PATH_INFO', '')
         if path.startswith('/api/index.py'):
-            environ['PATH_INFO'] = path[len('/api/index.py'):] or '/'
+            path = path[len('/api/index.py'):] or '/'
         elif path.startswith('/api/index'):
-            environ['PATH_INFO'] = path[len('/api/index'):] or '/'
+            path = path[len('/api/index'):] or '/'
+        environ['PATH_INFO'] = path
         return self.wsgi_app(environ, start_response)
 
 app.wsgi_app = VercelPathMiddleware(app.wsgi_app)
