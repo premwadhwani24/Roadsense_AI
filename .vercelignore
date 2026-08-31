@@ -1,0 +1,18 @@
+.git
+.env
+scratch/
+Cracks-and-Potholes-in-Road-Images-Dataset-master/
+deshcam_video_dataset/
+Dataset/
+Smart-Traffic-Management-System-SIH-main/
+road-damage-detector-main/
+IRRDD-main/
+AI-Smart-Road-Monitoring-main/
+RoadSense-AI-main/
+New folder/
+*.mp4
+*.avi
+*.mov
+*.webm
+*.zip
+*.tar.gz

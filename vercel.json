@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app_enhanced.py",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15MB" }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app_enhanced.py"
+    }
+  ]
+}
