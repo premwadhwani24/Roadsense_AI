@@ -24,8 +24,10 @@ import cv2
 logger = logging.getLogger(__name__)
 
 class VideoAnalyzerService:
-    def __init__(self, vision_service=None, upload_dir="static/assets/uploads/video_frames"):
+    def __init__(self, vision_service=None, upload_dir=None):
         self.vision_service = vision_service
+        if upload_dir is None:
+            upload_dir = "/tmp/uploads/video_frames" if os.environ.get("VERCEL") else "static/assets/uploads/video_frames"
         self.upload_dir = upload_dir
         os.makedirs(self.upload_dir, exist_ok=True)
 

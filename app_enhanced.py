@@ -2023,7 +2023,7 @@ def gov_camera_upload_inspect():
         file = request.files['file']
         if file and file.filename:
             filename = f"upload_{int(time.time())}_{random.randint(100,999)}.jpg"
-            upload_dir = os.path.join("static", "assets", "uploads")
+            upload_dir = "/tmp/uploads" if os.environ.get("VERCEL") else os.path.join("static", "assets", "uploads")
             os.makedirs(upload_dir, exist_ok=True)
             save_path = os.path.join(upload_dir, filename)
             file.save(save_path)
@@ -2585,7 +2585,7 @@ def video_upload_analyze():
         if 'file' in request.files and request.files['file'].filename:
             file = request.files['file']
             filename = f"video_{int(time.time())}_{random.randint(100, 999)}_{file.filename}"
-            upload_dir = os.path.join("static", "assets", "uploads", "videos")
+            upload_dir = "/tmp/uploads/videos" if os.environ.get("VERCEL") else os.path.join("static", "assets", "uploads", "videos")
             os.makedirs(upload_dir, exist_ok=True)
             save_path = os.path.join(upload_dir, filename)
             file.save(save_path)

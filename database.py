@@ -10,7 +10,16 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-DB_PATH = "roadsense.db"
+if os.environ.get("VERCEL"):
+    DB_PATH = "/tmp/roadsense.db"
+    if not os.path.exists(DB_PATH) and os.path.exists("roadsense.db"):
+        import shutil
+        try:
+            shutil.copy("roadsense.db", DB_PATH)
+        except Exception:
+            pass
+else:
+    DB_PATH = "roadsense.db"
 
 def init_database():
     """Initialize database schema with all required tables"""
