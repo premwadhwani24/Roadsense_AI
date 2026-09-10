@@ -97,6 +97,22 @@ def error_response(message: str, status_code: int = 400):
     """Utility function for standardized error responses"""
     return jsonify({"success": False, "error": message}), status_code
 
+@app.errorhandler(404)
+def handle_not_found(e):
+    if os.environ.get("VERCEL"):
+        return jsonify({
+            "error": "Not Found",
+            "path": request.path,
+            "full_path": request.full_path,
+            "script_root": request.script_root,
+            "environ_PATH_INFO": request.environ.get("PATH_INFO"),
+            "environ_SCRIPT_NAME": request.environ.get("SCRIPT_NAME"),
+            "environ_HTTP_X_MATCHED_PATH": request.environ.get("HTTP_X_MATCHED_PATH"),
+            "environ_HTTP_X_INVOKE_PATH": request.environ.get("HTTP_X_INVOKE_PATH"),
+            "environ_HTTP_X_VERCEL_PATH": request.environ.get("HTTP_X_VERCEL_PATH"),
+        }), 404
+    return jsonify({"success": False, "error": "Not Found"}), 404
+
 @app.errorhandler(Exception)
 def handle_global_exception(e):
     from werkzeug.exceptions import HTTPException
