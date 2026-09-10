@@ -66,9 +66,9 @@ try:
 except:
     pd = None
 
-GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
+GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "AIzaSyC-hoK6W7pQ9EK1LRrVUDLQaseQPjEfnW0")
 OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
-TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "4f299a89-0229-454a-b97f-7fa4e3198c7f")
 CARTO_API_KEY = os.environ.get("CARTO_API_KEY", "cb1_2k8n_1_26eca1d9286363e9242b4224")
 USE_MOCK_IF_NO_KEYS = True
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', "")
@@ -82,8 +82,12 @@ app.config["JSON_SORT_KEYS"] = False
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'change-this-secret')
 
 # Initialize database and auth
-init_database()
-jwt = setup_auth(app)
+try:
+    init_database()
+    jwt = setup_auth(app)
+except Exception as e:
+    logger.error(f"Failed to initialize database/auth on startup: {e}")
+    jwt = None
 
 # Initialize prediction engine
 prediction_engine = RoadPredictionEngine()
@@ -95,6 +99,9 @@ def error_response(message: str, status_code: int = 400):
 
 @app.errorhandler(Exception)
 def handle_global_exception(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e
     import traceback
     logger.error(f"Unhandled Exception: {e}\n{traceback.format_exc()}")
     return jsonify({
@@ -127,26 +134,28 @@ ROAD_SEGMENTS: Dict[str, Dict[str, Any]] = {
 # ====================================================================================
 
 @app.route("/")
-def landing():
-    """Serve the landing page"""
-    return render_template("landing.html")
-
-
 @app.route('/index')
+@app.route('/api')
+@app.route('/api/index')
 def index_page():
-    """Serve the original index dashboard page"""
+    """Serve the original index dashboard page directly"""
     return render_template('index.html', carto_api_key=CARTO_API_KEY)
+
+@app.route("/landing")
+def landing():
+    """Serve the marketing landing page"""
+    return render_template("landing.html")
 
 @app.route("/dashboard")
 @jwt_required()
 def dashboard():
-    """Serve the main dashboard"""
-    return render_template("dashboard.html", google_maps_key=GOOGLE_MAPS_KEY)
+    """Redirect dashboard requests to the main index page."""
+    return redirect(url_for('index_page'))
 
 @app.route("/login")
 def login_page():
-    """Serve the login page"""
-    return render_template("login.html")
+    """Redirect login requests to the main index page."""
+    return redirect(url_for('index_page'))
 
 
 @app.route('/login/google')
@@ -221,8 +230,8 @@ def google_callback():
 
 @app.route("/register")
 def register_page():
-    """Serve the registration page"""
-    return render_template("login.html")
+    """Redirect registration requests to the main index page."""
+    return redirect(url_for('index_page'))
 
 # ====================================================================================
 # AUTHENTICATION ENDPOINTS

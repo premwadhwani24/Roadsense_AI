@@ -5,12 +5,20 @@ No torchvision dependency required; 100% self-contained and high-performance.
 import math
 import random
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from PIL import Image, ImageEnhance
 
-class BasicBlock(nn.Module):
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+except ImportError:
+    torch = None
+    nn = None
+    F = None
+
+_nn_Module = nn.Module if nn is not None else object
+
+class BasicBlock(_nn_Module):
     expansion = 1
 
     def __init__(self, in_planes, planes, stride=1):
@@ -35,7 +43,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out
 
-class RoadDefectResNet(nn.Module):
+class RoadDefectResNet(_nn_Module):
     def __init__(self, num_classes=3):
         super(RoadDefectResNet, self).__init__()
         self.in_planes = 64
@@ -119,4 +127,4 @@ class FastImageTransform:
         arr = np.array(img, dtype=np.float32).transpose((2, 0, 1)) / 255.0
         arr = (arr - self.mean) / self.std
 
-        return torch.from_numpy(arr)
+        return torch.from_numpy(arr) if torch is not None else arr

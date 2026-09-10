@@ -19,7 +19,10 @@ import random
 import logging
 from pathlib import Path
 from PIL import Image
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +32,22 @@ class VideoAnalyzerService:
         if upload_dir is None:
             upload_dir = "/tmp/uploads/video_frames" if os.environ.get("VERCEL") else "static/assets/uploads/video_frames"
         self.upload_dir = upload_dir
-        os.makedirs(self.upload_dir, exist_ok=True)
+        try:
+            os.makedirs(self.upload_dir, exist_ok=True)
+        except Exception:
+            pass
 
     def analyze_video_file(self, video_path, sample_interval_sec=1.5, max_frames=40, start_lat=28.5450, start_lng=77.1250):
         """
         Analyzes a video file by sampling frames at regular intervals and running neural inference.
         Returns temporal timeline, defect hotspots, and trip health summary.
         """
+        if cv2 is None:
+            return {
+                "success": False,
+                "error": "OpenCV (cv2) is not installed in this environment. Video analysis is unavailable."
+            }
+
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found: {video_path}")
 

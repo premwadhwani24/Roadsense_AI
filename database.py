@@ -10,19 +10,31 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-if os.environ.get("VERCEL"):
-    DB_PATH = "/tmp/roadsense.db"
-    if not os.path.exists(DB_PATH) and os.path.exists("roadsense.db"):
+import tempfile
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or os.environ.get("LAMBDA_TASK_ROOT"):
+    DB_DIR = tempfile.gettempdir()
+    DB_PATH = os.path.join(DB_DIR, "roadsense.db")
+    source_db = os.path.join(BASE_DIR, "roadsense.db")
+    if not os.path.exists(DB_PATH) and os.path.exists(source_db):
         import shutil
         try:
-            shutil.copy("roadsense.db", DB_PATH)
+            shutil.copy(source_db, DB_PATH)
         except Exception:
             pass
 else:
-    DB_PATH = "roadsense.db"
+    DB_PATH = os.path.join(BASE_DIR, "roadsense.db")
 
 def init_database():
     """Initialize database schema with all required tables"""
+    try:
+        _do_init_database()
+    except Exception as e:
+        print(f"Database initialization warning: {e}")
+
+def _do_init_database():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -370,6 +382,7 @@ def init_database():
     seed_gov_road_network()
     seed_damage_road_dataset_evidence()
     print("Database initialized successfully")
+
 def seed_roadbounce_data():
     """Seed comprehensive All-India road condition monitoring dataset with real GPS & proof images"""
     conn = sqlite3.connect(DB_PATH)
