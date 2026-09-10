@@ -1,11 +1,7 @@
 {
   "functions": {
     "api/**/*.py": {
-      "includeFiles": [
-        "templates/**",
-        "static/**",
-        "roadsense.db"
-      ]
+      "includeFiles": ["templates/**", "static/**", "roadsense.db"]
     }
   },
   "rewrites": [
