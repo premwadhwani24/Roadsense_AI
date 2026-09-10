@@ -76,8 +76,11 @@ GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', "")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("roadsense_backend")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 app.config["JSON_SORT_KEYS"] = False
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'change-this-secret')
 
@@ -155,12 +158,28 @@ ROAD_SEGMENTS: Dict[str, Dict[str, Any]] = {
 @app.route('/api/index')
 def index_page():
     """Serve the original index dashboard page directly"""
-    return render_template('index.html', carto_api_key=CARTO_API_KEY)
+    try:
+        return render_template('index.html', carto_api_key=CARTO_API_KEY)
+    except Exception as e:
+        logger.error(f"Template render error: {e}")
+        index_file = os.path.join(TEMPLATE_DIR, "index.html")
+        if os.path.exists(index_file):
+            with open(index_file, "r", encoding="utf-8", errors="ignore") as f:
+                return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+        return jsonify({"success": True, "message": "RoadSense AI Backend Online", "status": "active"}), 200
 
 @app.route("/landing")
 def landing():
     """Serve the marketing landing page"""
-    return render_template("landing.html")
+    try:
+        return render_template("landing.html")
+    except Exception as e:
+        logger.error(f"Landing template render error: {e}")
+        landing_file = os.path.join(TEMPLATE_DIR, "landing.html")
+        if os.path.exists(landing_file):
+            with open(landing_file, "r", encoding="utf-8", errors="ignore") as f:
+                return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+        return redirect(url_for('index_page'))
 
 @app.route("/dashboard")
 @jwt_required()
