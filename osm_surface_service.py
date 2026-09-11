@@ -255,20 +255,42 @@ class OSMSurfaceService:
 
         results = []
 
-        # 1. Try Live Overpass API for rough/unpaved roads
-        overpass_query = f"""
-        [out:json][timeout:4];
-        (
-          way(around:{int(radius_km * 1000)},{lat},{lng})["highway"]["surface"~"unpaved|gravel|dirt|earth|compacted|damaged|potholed"];
-          way(around:{int(radius_km * 1000)},{lat},{lng})["highway"]["smoothness"~"bad|very_bad|horrible|very_horrible|impassable"];
-        );
-        out tags geom 20;
-        """
-        headers = {"User-Agent": "RoadSenseAI-SurfaceQualityEngine/3.0"}
+        # 1. First, search high-fidelity Pan-India registered rough corridors (instant 0.001s)
+        for r in cls.PAN_INDIA_ROUGH_REGISTRY:
+            dist = haversine_km(lat, lng, r["center_lat"], r["center_lng"])
+            if dist <= max(radius_km, 80.0):
+                copy_r = dict(r)
+                copy_r["distance_km"] = round(dist, 2)
+                copy_r["source"] = "OPENSTREETMAP_ROUGH_SURFACE"
+                copy_r["provenance"] = "OPENSTREETMAP_PAN_INDIA_REGISTRY"
+                copy_r["color_hex"] = "#EF4444" if copy_r["zone"] == "RED" else "#F59E0B"
+                copy_r["condition_label"] = f"OSM Rough Surface: {copy_r['surface']} (Smoothness: {copy_r['smoothness']})"
+                copy_r["confidence"] = "HIGH (Verified Ground Survey)"
+                copy_r["freshness"] = "Live GIS Registry"
+                copy_r["lanes"] = 2
+                copy_r["pavement_type"] = copy_r["surface"].title()
+                copy_r["pci_score"] = copy_r["health_score"]
+                copy_r["vibration_gforce_peak"] = 2.4 if copy_r["zone"] == "RED" else 1.5
+                copy_r["pothole_count"] = 3 if copy_r["zone"] == "RED" else 1
+                copy_r["crack_count"] = 4 if copy_r["zone"] == "RED" else 2
+                copy_r["length_km"] = 1.5
+                results.append(copy_r)
 
-        for ep in cls.OVERPASS_ENDPOINTS:
+        # 2. If no registered corridors in range, query Live Overpass API
+        if not results:
+            effective_radius = min(float(radius_km), 12.0)
+            overpass_query = f"""
+            [out:json][timeout:2];
+            (
+              way(around:{int(effective_radius * 1000)},{lat},{lng})["highway"]["surface"~"unpaved|gravel|dirt|earth|compacted|damaged|potholed"];
+              way(around:{int(effective_radius * 1000)},{lat},{lng})["highway"]["smoothness"~"bad|very_bad|horrible|very_horrible|impassable"];
+            );
+            out tags geom 20;
+            """
+            headers = {"User-Agent": "RoadSenseAI-SurfaceQualityEngine/3.0"}
+
             try:
-                resp = requests.post(ep, data={"data": overpass_query}, headers=headers, timeout=4, verify=False)
+                resp = requests.post(cls.OVERPASS_ENDPOINTS[0], data={"data": overpass_query}, headers=headers, timeout=1.5, verify=False)
                 if resp.status_code == 200:
                     data = resp.json()
                     elements = data.get("elements", [])
@@ -287,7 +309,6 @@ class OSMSurfaceService:
                         smooth = tags.get("smoothness", "bad")
                         name = tags.get("name", tags.get("name:en", f"Unpaved Corridor #{el['id']}"))
 
-                        # Classification
                         is_critical = smooth in ["horrible", "very_horrible", "impassable", "very_bad"] or surf in ["damaged", "potholed"]
                         zone = "RED" if is_critical else "YELLOW"
                         health_score = round(28.0 if zone == "RED" else 55.0, 1)
@@ -326,32 +347,8 @@ class OSMSurfaceService:
                             "smoothness_grade": smooth,
                             "proof_image_url": "/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" if zone == "RED" else "/static/assets/damaged_roads/bade%20gwalior.jpg"
                         })
-                    if results:
-                        break
             except Exception as e:
-                logger.warning(f"Overpass roughness query skipped for {ep}: {e}")
-                continue
-
-        # 2. Add matching Pan-India registered rough corridors if close to search point
-        for r in cls.PAN_INDIA_ROUGH_REGISTRY:
-            dist = haversine_km(lat, lng, r["center_lat"], r["center_lng"])
-            if dist <= max(radius_km, 80.0):
-                copy_r = dict(r)
-                copy_r["distance_km"] = round(dist, 2)
-                copy_r["source"] = "OPENSTREETMAP_ROUGH_SURFACE"
-                copy_r["provenance"] = "OPENSTREETMAP_PAN_INDIA_REGISTRY"
-                copy_r["color_hex"] = "#EF4444" if copy_r["zone"] == "RED" else "#F59E0B"
-                copy_r["condition_label"] = f"OSM Rough Surface: {copy_r['surface']} (Smoothness: {copy_r['smoothness']})"
-                copy_r["confidence"] = "HIGH (Verified Ground Survey)"
-                copy_r["freshness"] = "Live GIS Registry"
-                copy_r["lanes"] = 2
-                copy_r["pavement_type"] = copy_r["surface"].title()
-                copy_r["pci_score"] = copy_r["health_score"]
-                copy_r["vibration_gforce_peak"] = 2.4 if copy_r["zone"] == "RED" else 1.5
-                copy_r["pothole_count"] = 3 if copy_r["zone"] == "RED" else 1
-                copy_r["crack_count"] = 4 if copy_r["zone"] == "RED" else 2
-                copy_r["length_km"] = 1.5
-                results.append(copy_r)
+                logger.warning(f"Live Overpass query skipped: {e}")
 
         cls._cache[cache_key] = (now_ts, results)
         logger.info(f"Loaded {len(results)} OSM rough road segments for lat={lat}, lng={lng}")

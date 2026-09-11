@@ -22,11 +22,15 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 import logging
 
+from dotenv import load_dotenv
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 logger = logging.getLogger("roadsense.realtime_engine")
 
 GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
-OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
-TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
+OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY") or "bb4cf3e30f271d62b2b2f2e704f87a65"
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY") or "DPqNoJ2c25WmfrhnSmA8qC6U87YdxGVN"
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates the great-circle distance between two points on Earth in km."""
@@ -41,6 +45,7 @@ def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
 
 class LocationSearchEngine:
     """Handles Google Places Autocomplete and Geocoding with automatic Nominatim fallback."""
+    _google_disabled = False
 
     @staticmethod
     def search_location(query: str, lat: Optional[float] = None, lng: Optional[float] = None) -> List[Dict[str, Any]]:
@@ -50,17 +55,17 @@ class LocationSearchEngine:
         query = query.strip()
         results = []
 
-        # 1. Try Google Maps Places / Geocoding if API key is provided
-        if GOOGLE_MAPS_KEY:
+        # 1. Try Google Maps Places / Geocoding if API key is provided and not disabled
+        if GOOGLE_MAPS_KEY and not LocationSearchEngine._google_disabled:
             try:
                 g_url = "https://maps.googleapis.com/maps/api/geocode/json"
                 params = {"address": query, "key": GOOGLE_MAPS_KEY}
                 if lat and lng:
                     params["location"] = f"{lat},{lng}"
                 try:
-                    resp = requests.get(g_url, params=params, timeout=4)
+                    resp = requests.get(g_url, params=params, timeout=2)
                 except requests.exceptions.SSLError:
-                    resp = requests.get(g_url, params=params, timeout=4, verify=False)
+                    resp = requests.get(g_url, params=params, timeout=2, verify=False)
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "OK":
@@ -75,6 +80,8 @@ class LocationSearchEngine:
                                 "source": "GOOGLE_MAPS"
                             })
                     else:
+                        if data.get("status") in ["REQUEST_DENIED", "OVER_QUERY_LIMIT"]:
+                            LocationSearchEngine._google_disabled = True
                         logger.warning(f"Google Maps API status: {data.get('status')} - {data.get('error_message', '')}")
             except Exception as e:
                 logger.warning(f"Google Maps geocoding error: {e}")

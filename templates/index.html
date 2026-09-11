@@ -1538,7 +1538,7 @@
         async function loadGovRoadNetwork(state = null, status = null) {
             initGovMap();
             try {
-                let url = `/api/v3/gov/network?radius_km=60&live_incidents=${liveHazardsActive}&osm_roughness=${osmRoughnessActive}`;
+                let url = `/api/v3/gov/network?radius_km=30&live_incidents=${liveHazardsActive}&osm_roughness=${osmRoughnessActive}`;
                 if (state && state !== 'ALL') url += `&state=${encodeURIComponent(state)}`;
                 if (status && status !== 'ALL') url += `&status=${status}`;
 

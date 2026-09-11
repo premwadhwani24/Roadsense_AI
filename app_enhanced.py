@@ -20,7 +20,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, set_acce
 
 # Import enhanced modules
 from dotenv import load_dotenv
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 from database import init_database, DatabaseManager, DB_PATH
 from auth import setup_auth, authenticate_user, register_user, check_user_role
@@ -66,10 +67,10 @@ try:
 except:
     pd = None
 
-GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "AIzaSyC-hoK6W7pQ9EK1LRrVUDLQaseQPjEfnW0")
-OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
-TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "4f299a89-0229-454a-b97f-7fa4e3198c7f")
-CARTO_API_KEY = os.environ.get("CARTO_API_KEY", "cb1_2k8n_1_26eca1d9286363e9242b4224")
+GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
+OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY") or "bb4cf3e30f271d62b2b2f2e704f87a65"
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY") or "DPqNoJ2c25WmfrhnSmA8qC6U87YdxGVN"
+CARTO_API_KEY = os.environ.get("CARTO_API_KEY") or "cb1_2k8n_1_26eca1d9286363e9242b4224"
 USE_MOCK_IF_NO_KEYS = True
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', "")
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', "")
@@ -83,6 +84,9 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 app.config["JSON_SORT_KEYS"] = False
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'change-this-secret')
+
+import concurrent.futures
+ASYNC_WORKER_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 
 # Initialize database and auth
 try:
@@ -1994,25 +1998,43 @@ def gov_road_network():
     # 1. Fetch existing DB segments instantly
     db_segments = DatabaseManager.get_gov_segments(state=state, district=district, city=city, status=status, pincode=pincode)
 
-    # 2. Fetch Live TomTom Real-Time Road Hazards, Roadworks & Closures
+    # 2 & 3. Fetch Live TomTom Incidents & OSM Rough Corridors in Parallel
     include_live_incidents = request.args.get("live_incidents", "true").lower() in ["true", "1", "yes"]
+    include_osm_roughness = request.args.get("osm_roughness", "true").lower() in ["true", "1", "yes"]
     live_hazards = []
-    if include_live_incidents:
+    osm_rough_roads = []
+
+    def _fetch_tomtom():
         try:
             from tomtom_incidents_service import TomTomIncidentsService
-            live_hazards = TomTomIncidentsService.get_live_incidents(lat=lat, lng=lng, radius_km=radius_km, limit=120)
+            return TomTomIncidentsService.get_live_incidents(lat=lat, lng=lng, radius_km=min(radius_km, 35.0), limit=120)
         except Exception as e:
             logger.warning(f"Live TomTom incidents ingest error: {e}")
+            return []
 
-    # 3. Fetch Live OpenStreetMap Rough & Unpaved Road Corridors (Phase 3)
-    include_osm_roughness = request.args.get("osm_roughness", "true").lower() in ["true", "1", "yes"]
-    osm_rough_roads = []
-    if include_osm_roughness:
+    def _fetch_osm():
         try:
             from osm_surface_service import OSMSurfaceService
-            osm_rough_roads = OSMSurfaceService.get_rough_roads(lat=lat, lng=lng, radius_km=radius_km, limit=35)
+            return OSMSurfaceService.get_rough_roads(lat=lat, lng=lng, radius_km=min(radius_km, 25.0), limit=35)
         except Exception as e:
             logger.warning(f"Live OSM rough roads ingest error: {e}")
+            return []
+
+    f_tt = ASYNC_WORKER_POOL.submit(_fetch_tomtom) if include_live_incidents else None
+    f_osm = ASYNC_WORKER_POOL.submit(_fetch_osm) if include_osm_roughness else None
+
+    if f_tt:
+        try:
+            live_hazards = f_tt.result(timeout=2.8)
+        except Exception as e:
+            logger.warning(f"TomTom fetch timed out / error: {e}")
+            live_hazards = []
+    if f_osm:
+        try:
+            osm_rough_roads = f_osm.result(timeout=1.5)
+        except Exception as e:
+            logger.warning(f"OSM rough roads fetch timed out / error: {e}")
+            osm_rough_roads = []
 
     # 4. Fetch Crowdsourced Citizen Damage Reports (Phase 2)
     citizen_reports_pins = []
@@ -3096,6 +3118,7 @@ def get_gov_dossier(segment_id):
 
 
 @app.route("/gov/dossier/print/<segment_id>", methods=["GET"])
+@app.route("/api/v3/gov/dossier/<segment_id>/print", methods=["GET"])
 def print_gov_dossier(segment_id):
     """
     Renders high-fidelity printable A4 official Government Pavement Audit Dossier.
@@ -3112,6 +3135,7 @@ def print_gov_dossier(segment_id):
 
 
 @app.route("/api/v3/gov/dossier/export-geojson/<segment_id>", methods=["GET"])
+@app.route("/api/v3/gov/dossier/<segment_id>/geojson", methods=["GET"])
 def export_gov_dossier_geojson(segment_id):
     """
     Exports PM Gati Shakti NMP standard GeoJSON FeatureCollection for a specific road corridor.

@@ -11,9 +11,14 @@ import logging
 import requests
 from typing import Dict, Any, List, Optional, Tuple
 
+from dotenv import load_dotenv
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 logger = logging.getLogger("roadsense.tomtom_incidents")
 
-TOMTOM_KEY = os.environ.get("TOMTOM_KEY", "")
+DEFAULT_TOMTOM_KEY = "DPqNoJ2c25WmfrhnSmA8qC6U87YdxGVN"
+TOMTOM_KEY = os.environ.get("TOMTOM_KEY") or DEFAULT_TOMTOM_KEY
 
 CATEGORY_MAP = {
     0: ("General Hazard", "YELLOW"),
@@ -59,7 +64,7 @@ class TomTomIncidentsService:
         Retrieves real-time incidents from TomTom API and formats them as
         RoadSense road segments with GPS coordinates, polylines, and severity zones.
         """
-        api_key = os.getenv("TOMTOM_KEY") or TOMTOM_KEY
+        api_key = os.getenv("TOMTOM_KEY") or TOMTOM_KEY or DEFAULT_TOMTOM_KEY
         if not api_key:
             logger.warning("No TOMTOM_KEY found in environment.")
             return []
@@ -81,10 +86,7 @@ class TomTomIncidentsService:
         url = f"https://api.tomtom.com/traffic/services/5/incidentDetails?bbox={bbox}&key={api_key}&fields={fields_param}"
 
         try:
-            try:
-                resp = requests.get(url, timeout=5)
-            except requests.exceptions.SSLError:
-                resp = requests.get(url, timeout=5, verify=False)
+            resp = requests.get(url, timeout=3.0, verify=False)
 
             if resp.status_code != 200:
                 logger.warning(f"TomTom incidents API returned {resp.status_code}: {resp.text[:200]}")
