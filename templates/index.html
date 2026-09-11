@@ -364,10 +364,14 @@
                     <div id="indiaMap" style="width: 100%; height: 680px; min-height: 680px; background: #0f172a; border-radius: 18px;"></div>
 
                     <!-- Map Floating Layer Controls Bar -->
-                    <div id="mapControlsBar" class="absolute top-4 right-4 z-[1000] flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700 shadow-xl">
+                    <div id="mapControlsBar" class="absolute top-4 right-4 z-[1000] flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700 shadow-xl flex-wrap">
                         <button id="btnToggleLiveHazards" onclick="toggleLiveHazards()" class="px-2.5 py-1 rounded-xl text-[11px] font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 hover:bg-rose-900 transition flex items-center gap-1.5 shadow-sm" title="Toggle Real-Time TomTom Road Hazards & Closures">
                             <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block"></span>
                             <span>📡 Live Hazards (<span id="liveHazardCountPill">--</span>)</span>
+                        </button>
+                        <button id="btnToggleOsmRoughness" onclick="toggleOsmRoughness()" class="px-2.5 py-1 rounded-xl text-[11px] font-bold text-amber-300 bg-amber-950/80 border border-amber-700/60 hover:bg-amber-900 transition flex items-center gap-1.5 shadow-sm" title="Toggle OpenStreetMap Rough & Unpaved Corridors (Phase 3)">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                            <span>🌐 OSM Rough Roads (<span id="liveOsmCountPill">--</span>)</span>
                         </button>
                         <button id="btnTileCarto" onclick="switchTileProvider('carto')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow-sm transition">🗺️ Map</button>
                         <button id="btnTileOsm" onclick="switchTileProvider('osm')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🌍 OSM</button>
@@ -375,6 +379,13 @@
                         <button id="btnTileCanvas" onclick="switchTileProvider('canvas')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">📐 GIS Grid</button>
                         <button onclick="recenterGovMap()" class="px-2.5 py-1 rounded-xl text-[11px] font-bold text-amber-400 bg-slate-800 hover:bg-slate-700 transition" title="Recenter Map View">🎯 Fit Corridors</button>
                     </div>
+
+                    <!-- Floating Action Button: Report Road Damage (Phase 2) -->
+                    <button onclick="openCitizenReportModal()" id="btnFabReportDamage" class="absolute bottom-6 left-6 z-[1000] px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2.5 border-2 border-white/20 transition-all transform hover:scale-105 active:scale-95 group cursor-pointer">
+                        <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+                        <i class="fa-solid fa-camera text-sm"></i>
+                        <span>🚩 Report Road Damage / गड्ढा रिपोर्ट करें</span>
+                    </button>
 
                     <!-- Map Floating Legend -->
                     <div id="mapLegend">
@@ -760,7 +771,109 @@
             </div>
         </section>
 
-    
+        <!-- PHASE 2: CITIZEN ROAD DAMAGE REPORT & LIVE PINNING MODAL -->
+        <div id="citizenReportModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-200">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xl shadow-inner">
+                            🚩
+                        </div>
+                        <div>
+                            <h3 class="text-base font-black text-slate-900">Report Road Damage / गड्ढा रिपोर्ट करें</h3>
+                            <span class="text-[11px] text-slate-500 font-mono">Live Citizen Field Crowdsourcing with ResNet-18 Vision Verification</span>
+                        </div>
+                    </div>
+                    <button onclick="closeCitizenReportModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">✕</button>
+                </div>
+
+                <form id="citizenReportForm" onsubmit="submitCitizenDamageReport(event)" class="space-y-4">
+                    <!-- Step 1: Geolocation Selection -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">1. Pinpoint Damage Location</label>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <button type="button" onclick="detectCitizenGPS()" id="btnCitizenDetectGps" class="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer">
+                                <i class="fa-solid fa-location-crosshairs text-blue-600"></i>
+                                <span>Use My Live GPS</span>
+                            </button>
+                            <button type="button" onclick="enableMapPinpointMode()" id="btnCitizenPickMap" class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer">
+                                <i class="fa-solid fa-map-pin text-rose-600"></i>
+                                <span>Click on Map to Drop Pin</span>
+                            </button>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex justify-between items-center font-mono text-[11px]">
+                            <span class="text-slate-500">Selected Coordinates:</span>
+                            <strong id="citizenCoordsDisplay" class="text-slate-800">28.6139° N, 77.2090° E</strong>
+                        </div>
+                        <input type="hidden" id="citizenLatInput" value="28.6139">
+                        <input type="hidden" id="citizenLngInput" value="77.2090">
+                    </div>
+
+                    <!-- Step 2: Road & Damage Info -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Road / Landmark Name</label>
+                            <input type="text" id="citizenRoadNameInput" placeholder="e.g. Ring Road near AIIMS Flyover" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Damage Category</label>
+                            <select id="citizenIssueTypeSelect" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none font-semibold">
+                                <option value="Pothole" selected>⚠️ Critical Pothole (खतरनाक गड्ढा)</option>
+                                <option value="Major Crack">⚡ Alligator / Structural Crack</option>
+                                <option value="Waterlogging Distress">🌊 Flooding / Waterlogging</option>
+                                <option value="Road Excavation / Sinkhole">⛔ Surface Cave-in / Excavation</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Damage Description / Comments</label>
+                        <textarea id="citizenDescriptionInput" rows="2" placeholder="Describe depth, hazard to two-wheelers, traffic delay..." class="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-rose-500 outline-none resize-none"></textarea>
+                    </div>
+
+                    <!-- Step 3: Photographic Evidence -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">2. Upload Damage Photo Proof (Camera / Gallery)</label>
+                        <input id="citizenFileInput" type="file" accept="image/*" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-rose-600 file:text-white hover:file:bg-rose-700 cursor-pointer border border-slate-200 rounded-2xl p-2 bg-slate-50 mb-2">
+
+                        <div class="text-center text-[10px] text-slate-400 font-mono font-bold uppercase mb-2">— OR SELECT SAMPLE EVIDENCE PHOTO —</div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer border border-slate-200 rounded-xl p-1 hover:border-rose-500 transition-all text-center">
+                                <input type="radio" name="citizen_sample" value="/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" class="sr-only" checked>
+                                <img src="/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg" class="h-12 w-full object-cover rounded-lg mb-1">
+                                <span class="text-[9px] font-mono text-slate-600 block truncate">Deep Pothole</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-200 rounded-xl p-1 hover:border-rose-500 transition-all text-center">
+                                <input type="radio" name="citizen_sample" value="/static/assets/damaged_roads/gwalior%20fort%20road.jpg" class="sr-only">
+                                <img src="/static/assets/damaged_roads/gwalior%20fort%20road.jpg" class="h-12 w-full object-cover rounded-lg mb-1">
+                                <span class="text-[9px] font-mono text-slate-600 block truncate">Cracked Road</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-200 rounded-xl p-1 hover:border-rose-500 transition-all text-center">
+                                <input type="radio" name="citizen_sample" value="/static/assets/damaged_roads/bade%20gwalior.jpg" class="sr-only">
+                                <img src="/static/assets/damaged_roads/bade%20gwalior.jpg" class="h-12 w-full object-cover rounded-lg mb-1">
+                                <span class="text-[9px] font-mono text-slate-600 block truncate">Rough Surface</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Progress Indicator -->
+                    <div id="citizenUploadProgress" class="hidden p-3 bg-rose-50 text-rose-800 rounded-xl text-xs font-mono flex items-center gap-2 border border-rose-200">
+                        <i class="fa-solid fa-spinner fa-spin text-rose-600"></i>
+                        <span>Running PyTorch AI Vision Verification & Pinning Damage to Live Map...</span>
+                    </div>
+
+                    <!-- Modal Actions -->
+                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeCitizenReportModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition cursor-pointer">Cancel</button>
+                        <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-2 transition transform hover:scale-105 cursor-pointer">
+                            <i class="fa-solid fa-map-pin"></i> Submit & Pin Damage to Live Map
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- LIVE CAMERA PHOTO UPLOAD & INSPECTION MODAL -->
         <div id="cameraUploadModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200">
@@ -1393,6 +1506,8 @@
         });
 
         let liveHazardsActive = true;
+        let osmRoughnessActive = true;
+
         function toggleLiveHazards() {
             liveHazardsActive = !liveHazardsActive;
             const btn = document.getElementById('btnToggleLiveHazards');
@@ -1406,11 +1521,24 @@
             loadGovRoadNetwork();
         }
 
+        function toggleOsmRoughness() {
+            osmRoughnessActive = !osmRoughnessActive;
+            const btn = document.getElementById('btnToggleOsmRoughness');
+            if (btn) {
+                if (osmRoughnessActive) {
+                    btn.className = 'px-2.5 py-1 rounded-xl text-[11px] font-bold text-amber-300 bg-amber-950/80 border border-amber-700/60 hover:bg-amber-900 transition flex items-center gap-1.5 shadow-sm';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-xl text-[11px] font-bold text-slate-400 bg-slate-800 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5 opacity-60';
+                }
+            }
+            loadGovRoadNetwork();
+        }
+
         // Load Road Network from API
         async function loadGovRoadNetwork(state = null, status = null) {
             initGovMap();
             try {
-                let url = `/api/v3/gov/network?radius_km=60&live_incidents=${liveHazardsActive}`;
+                let url = `/api/v3/gov/network?radius_km=60&live_incidents=${liveHazardsActive}&osm_roughness=${osmRoughnessActive}`;
                 if (state && state !== 'ALL') url += `&state=${encodeURIComponent(state)}`;
                 if (status && status !== 'ALL') url += `&status=${status}`;
 
@@ -1420,8 +1548,13 @@
                 currentSegments = data.segments || [];
                 const pill = document.getElementById('liveHazardCountPill');
                 if (pill) {
-                    const count = data.live_incidents_count !== undefined ? data.live_incidents_count : currentSegments.filter(s => s.provenance === 'TOMTOM_TRAFFIC_INCIDENTS_API').length;
+                    const count = data.live_incidents_count !== undefined ? data.live_incidents_count : currentSegments.filter(s => s.source === 'TOMTOM_LIVE_INCIDENTS').length;
                     pill.innerText = count;
+                }
+
+                const osmPill = document.getElementById('liveOsmCountPill');
+                if (osmPill) {
+                    osmPill.innerText = data.osm_rough_roads_count || currentSegments.filter(s => s.source === 'OPENSTREETMAP_ROUGH_SURFACE').length;
                 }
 
                 if (!map) initGovMap();
@@ -1458,26 +1591,20 @@
             segments.forEach(seg => {
                 const score = (seg.condition_score !== undefined && seg.condition_score !== null) 
                     ? seg.condition_score : ((seg.health_score !== undefined && seg.health_score !== null) ? seg.health_score : 50.0);
-                const zone = (seg.zone || seg.condition || seg.condition_status || (score < 40.0 ? 'RED' : (score <= 70.0 ? 'YELLOW' : 'GREEN'))).toUpperCase();
+                const zone = seg.zone || (score < 40 ? 'RED' : (score <= 70 ? 'YELLOW' : 'GREEN'));
                 if (zone === 'GREEN') greenCount++;
                 else if (zone === 'YELLOW') yellowCount++;
-                else if (zone === 'RED' || score < 40.0) redCount++;
-                if (seg.pothole_count) potholeBacklog += seg.pothole_count;
+                else if (zone === 'RED') redCount++;
+
+                potholeBacklog += (seg.pothole_count || 0);
             });
-            let greenPct = mappedSegments > 0 ? ((greenCount / mappedSegments) * 100).toFixed(1) : 0;
-            let savingsLakhs = (yellowCount * 1.45).toFixed(1);
-            
-            let elMapped = document.getElementById('kpiMappedSegments');
-            if(elMapped) {
-                elMapped.innerText = mappedSegments;
-                elMapped.nextElementSibling.innerText = `${totalKm.toFixed(1)} Route KM`;
-                document.getElementById('kpiGreenSegments').innerText = greenCount;
-                document.getElementById('kpiGreenSegments').nextElementSibling.innerText = `${greenPct}% Network`;
-                document.getElementById('kpiYellowSegments').innerText = yellowCount;
-                document.getElementById('kpiRedSegments').innerText = redCount;
-                document.getElementById('kpiPotholeBacklog').innerText = potholeBacklog;
-                document.getElementById('kpiSavingsINR').innerText = `₹${savingsLakhs} L`;
-            }
+
+            document.getElementById('kpiSegmentsMonitored').innerText = mappedSegments;
+            document.getElementById('kpiTotalKilometers').innerText = totalKm.toFixed(1);
+            document.getElementById('kpiGreenZones').innerText = greenCount;
+            document.getElementById('kpiYellowZones').innerText = yellowCount;
+            document.getElementById('kpiRedZones').innerText = redCount;
+            document.getElementById('kpiTotalPotholes').innerText = potholeBacklog;
 
             const bounds = L.latLngBounds();
 
@@ -1486,26 +1613,26 @@
                     ? seg.condition_score 
                     : ((seg.health_score !== undefined && seg.health_score !== null) ? seg.health_score : 50.0);
                 
-                const zone = (seg.zone || seg.condition || seg.condition_status || (score < 40.0 ? 'RED' : (score <= 70.0 ? 'YELLOW' : 'GREEN'))).toUpperCase();
+                const zone = seg.zone || (score < 40 ? 'RED' : (score <= 70 ? 'YELLOW' : 'GREEN'));
                 
-                let color = '#10b981'; // Green (>70)
-                let weight = 6;
+                let color = '#94a3b8';
+                let weight = 4;
                 let dashArray = null;
-                let zoneTitle = '🟢 GREEN ZONE (>70) • OPTIMAL';
+                let zoneTitle = 'Uninspected Section';
 
-                if (zone === 'RED' || score < 40.0) {
-                    color = '#ef4444';
-                    weight = 7;
-                    zoneTitle = '🔴 RED ZONE (<40) • CRITICAL HAZARD';
-                } else if (zone === 'YELLOW' || score <= 70.0) {
-                    color = '#f59e0b';
-                    weight = 6;
-                    zoneTitle = '🟡 YELLOW ZONE (40-70) • MODERATE';
-                } else if (zone === 'DATA_UNAVAILABLE') {
-                    color = '#94a3b8';
-                    dashArray = '6, 8';
-                    zoneTitle = '⚪ UNMONITORED CORRIDOR';
+                if (zone === 'GREEN') {
+                    color = '#10B981'; weight = 5; zoneTitle = 'GREEN ZONE (PCI > 70) • Optimal';
+                } else if (zone === 'YELLOW') {
+                    color = '#F59E0B'; weight = 6; zoneTitle = 'YELLOW ZONE (PCI 40-70) • Moderate Wear';
+                } else if (zone === 'RED') {
+                    color = '#EF4444'; weight = 7; zoneTitle = 'RED ZONE (PCI < 40) • Critical Action Needed';
+                } else {
+                    dashArray = '5, 8';
                 }
+
+                const isLiveTomTom = seg.source === 'TOMTOM_LIVE_INCIDENTS';
+                const isOsmRough = seg.source === 'OPENSTREETMAP_ROUGH_SURFACE';
+                const isCitizen = seg.source === 'CITIZEN_REPORT';
 
                 // 1. Draw Polyline if coordinates exist
                 if (seg.polyline && seg.polyline.length > 1) {
@@ -1519,13 +1646,15 @@
                     }).addTo(map);
 
                     polyline.on('click', () => selectGovRoad(seg));
-                    const isLive = seg.source === 'TOMTOM_LIVE_INCIDENTS';
+                    const tag = isCitizen ? '🚩 CITIZEN: ' : (isOsmRough ? '🌐 OSM ROUGH: ' : (isLiveTomTom ? '🚨 LIVE HAZARD: ' : ''));
                     polyline.bindTooltip(`
                         <div style="font-family:'Inter',sans-serif; font-size:11px; padding:2px;">
-                            <strong style="font-size:12px; color:#0f172a;">${isLive ? '🚨 LIVE HAZARD: ' : ''}${seg.road_name}</strong><br>
+                            <strong style="font-size:12px; color:#0f172a;">${tag}${seg.road_name}</strong><br>
                             <span style="display:inline-block; margin-top:2px; font-weight:700; color:${color};">${zoneTitle}</span><br>
                             <span>Health Score: <strong>${Math.round(score)}/100</strong> • IRI: ${seg.iri_score || 1.8} m/km</span>
-                            ${isLive && seg.event_description ? `<div style="font-size:10px; color:#b91c1c; margin-top:3px; font-weight:600;">⚠️ ${seg.event_description}</div>` : ''}
+                            ${isLiveTomTom && seg.event_description ? `<div style="font-size:10px; color:#b91c1c; margin-top:3px; font-weight:600;">⚠️ ${seg.event_description}</div>` : ''}
+                            ${isOsmRough && seg.surface_type ? `<div style="font-size:10px; color:#92400e; margin-top:3px; font-weight:600;">Surface: ${seg.surface_type} (${seg.smoothness_grade || 'Rough'})</div>` : ''}
+                            ${isCitizen && seg.description ? `<div style="font-size:10px; color:#b91c1c; margin-top:3px; font-weight:600;">Note: ${seg.description}</div>` : ''}
                         </div>
                     `, { sticky: true });
                     roadPolylines.push(polyline);
@@ -1534,9 +1663,8 @@
 
                 // 2. Draw Center Point Marker
                 if (seg.center_lat && seg.center_lng) {
-                    const isLive = seg.source === 'TOMTOM_LIVE_INCIDENTS';
                     const iconClass = zone === 'RED' ? 'red' : (zone === 'YELLOW' ? 'yellow' : (zone === 'GREEN' ? 'green' : 'uninspected'));
-                    const iconSymbol = isLive ? (zone === 'RED' ? '🚨' : '⚠️') : (zone === 'RED' ? '!' : (zone === 'YELLOW' ? '⚡' : (zone === 'GREEN' ? '✓' : '?')));
+                    const iconSymbol = isCitizen ? '🚩' : (isOsmRough ? '🌐' : (isLiveTomTom ? (zone === 'RED' ? '🚨' : '⚠️') : (zone === 'RED' ? '!' : (zone === 'YELLOW' ? '⚡' : (zone === 'GREEN' ? '✓' : '?')))));
 
                     const icon = L.divIcon({
                         className: '',
@@ -1551,37 +1679,52 @@
                     const proofImg = seg.proof_image_url || seg.image_url || '';
                     const proofImgHtml = proofImg ? `<img src="${proofImg}" style="width:100%; height:96px; object-fit:cover; border-radius:6px; margin-bottom:6px; border:1px solid #e2e8f0;" alt="Road Condition Proof" onerror="this.style.display='none'">` : '';
 
-                    const liveBadgeHtml = isLive ? `
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
-                            <span style="background:#fee2e2; color:#b91c1c; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:4px;">
-                                <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
-                                LIVE TELEMETRY
-                            </span>
-                            <span style="font-size:9px; color:#475569; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${seg.incident_category || 'Hazard'}</span>
-                        </div>
-                    ` : '';
-
-                    const delayHtml = (isLive && seg.delay_seconds > 0) ? `
-                        <div style="font-size:10px; color:#dc2626; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                            <i class="fa-solid fa-clock"></i> Active Delay: ~${Math.round(seg.delay_seconds / 60)} mins
-                        </div>
-                    ` : '';
-
-                    const causeHtml = (isLive && seg.event_description) ? `
-                        <div style="font-size:10px; color:#1e293b; margin-bottom:6px; background:#f8fafc; padding:4px 6px; border-radius:5px; border-left:3px solid ${color};">
-                            <strong>Cause:</strong> ${seg.event_description}
-                        </div>
-                    ` : '';
+                    let badgeHtml = '';
+                    if (isCitizen) {
+                        badgeHtml = `
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                                <span style="background:#fee2e2; color:#b91c1c; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:4px;">
+                                    <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
+                                    CITIZEN REPORT
+                                </span>
+                                <span style="font-size:9px; color:#475569; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${seg.issue_type || 'Field Verified'}</span>
+                            </div>
+                            ${seg.description ? `<div style="font-size:10px; color:#1e293b; margin-bottom:6px; background:#f8fafc; padding:4px 6px; border-radius:5px; border-left:3px solid #ef4444;"><strong>Citizen Note:</strong> ${seg.description}</div>` : ''}
+                        `;
+                    } else if (isOsmRough) {
+                        badgeHtml = `
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                                <span style="background:#fef3c7; color:#92400e; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid #fcd34d; display:inline-flex; align-items:center; gap:4px;">
+                                    <span style="width:6px; height:6px; background:#f59e0b; border-radius:50%; display:inline-block;"></span>
+                                    OSM ROUGH ROAD
+                                </span>
+                                <span style="font-size:9px; color:#475569; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${seg.surface_type || 'Unpaved'}</span>
+                            </div>
+                            <div style="font-size:10px; color:#475569; margin-bottom:4px; background:#f8fafc; padding:3px 6px; border-radius:4px;">
+                                Smoothness: <strong>${seg.smoothness_grade || 'Rough'}</strong> • Surface: <strong>${seg.surface_type || 'Unpaved'}</strong>
+                            </div>
+                        `;
+                    } else if (isLiveTomTom) {
+                        badgeHtml = `
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                                <span style="background:#fee2e2; color:#b91c1c; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:4px;">
+                                    <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
+                                    LIVE TELEMETRY
+                                </span>
+                                <span style="font-size:9px; color:#475569; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${seg.incident_category || 'Hazard'}</span>
+                            </div>
+                            ${seg.delay_seconds > 0 ? `<div style="font-size:10px; color:#dc2626; font-weight:700; margin-bottom:4px;"><i class="fa-solid fa-clock"></i> Active Delay: ~${Math.round(seg.delay_seconds / 60)} mins</div>` : ''}
+                            ${seg.event_description ? `<div style="font-size:10px; color:#1e293b; margin-bottom:6px; background:#f8fafc; padding:4px 6px; border-radius:5px; border-left:3px solid ${color};"><strong>Cause:</strong> ${seg.event_description}</div>` : ''}
+                        `;
+                    }
 
                     marker.bindPopup(`
                         <div style="font-family:'Inter',sans-serif; min-width:250px; max-width:280px; padding:4px;">
                             ${proofImgHtml}
-                            ${liveBadgeHtml}
+                            ${badgeHtml}
                             <span style="font-size:9px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">${seg.segment_id}</span>
                             <h4 style="font-weight:800; font-size:13px; margin:2px 0 4px 0; color:#0f172a;">${seg.road_name}</h4>
                             <div style="font-size:11px; color:#475569; margin-bottom:6px;">${seg.city || 'Delhi NCR'}, ${seg.state || 'India'} • ${seg.road_type || 'Arterial'}</div>
-                            ${delayHtml}
-                            ${causeHtml}
                             <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:6px; background:#f8fafc; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
                                 <span>Condition Score:</span>
                                 <strong style="color:${color}; font-size:13px;">${Math.round(score)} / 100 (${zone})</strong>
@@ -1625,6 +1768,13 @@
 
                 const isSelected = activeSegment && activeSegment.segment_id === seg.segment_id;
                 const isLive = seg.source === 'TOMTOM_LIVE_INCIDENTS';
+                const isOsm = seg.source === 'OPENSTREETMAP_ROUGH_SURFACE';
+                const isCit = seg.source === 'CITIZEN_REPORT';
+
+                let sourcePill = '';
+                if (isLive) sourcePill = `<span class="inline-flex items-center gap-1 text-[8px] font-extrabold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.2 rounded-full uppercase"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>TOMTOM</span>`;
+                else if (isOsm) sourcePill = `<span class="inline-flex items-center gap-1 text-[8px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded-full uppercase">OSM ROUGH</span>`;
+                else if (isCit) sourcePill = `<span class="inline-flex items-center gap-1 text-[8px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-full uppercase">🚩 CITIZEN</span>`;
 
                 return `
                     <div onclick="selectGovRoadById('${seg.segment_id}')" 
@@ -1633,11 +1783,13 @@
                             <div class="flex-1">
                                 <div class="flex items-center gap-1.5 mb-1">
                                     <span class="text-[9px] font-mono font-bold text-slate-400">${seg.segment_id}</span>
-                                    ${isLive ? `<span class="inline-flex items-center gap-1 text-[8px] font-extrabold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.2 rounded-full uppercase"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>LIVE</span>` : ''}
+                                    ${sourcePill}
                                 </div>
                                 <h4 class="text-xs font-black text-slate-900 leading-tight">${seg.road_name}</h4>
                                 <span class="text-[10px] text-slate-500 font-mono block mt-0.5">${seg.city || 'Delhi NCR'}, ${seg.state || 'India'} • ${seg.road_type || 'Arterial'}</span>
                                 ${isLive && seg.event_description ? `<div class="text-[9px] text-rose-700 font-semibold mt-1 truncate">⚠️ ${seg.event_description}</div>` : ''}
+                                ${isOsm && seg.surface_type ? `<div class="text-[9px] text-amber-800 font-semibold mt-1 truncate">Surface: ${seg.surface_type} (${seg.smoothness_grade || 'Rough'})</div>` : ''}
+                                ${isCit && seg.description ? `<div class="text-[9px] text-rose-700 font-semibold mt-1 truncate">Report: ${seg.description}</div>` : ''}
                             </div>
                             <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-${statusColor}-100 text-${statusColor}-800 shrink-0">
                                 ${cond}
@@ -1872,8 +2024,213 @@
             }
         }
 
-        // Ingest Simulated Camera Frame
-        async 
+        // =========================================================================
+        // PHASE 2: CITIZEN DAMAGE REPORTING & REAL-TIME PINNING
+        // =========================================================================
+        let isPinpointMode = false;
+        let citizenPinMarker = null;
+
+        function openCitizenReportModal() {
+            document.getElementById('citizenReportModal').classList.remove('hidden');
+            if (map) {
+                const c = map.getCenter();
+                document.getElementById('citizenLatInput').value = c.lat.toFixed(6);
+                document.getElementById('citizenLngInput').value = c.lng.toFixed(6);
+                document.getElementById('citizenCoordsDisplay').innerText = `${c.lat.toFixed(4)}° N, ${c.lng.toFixed(4)}° E`;
+            }
+        }
+
+        function closeCitizenReportModal() {
+            document.getElementById('citizenReportModal').classList.add('hidden');
+            if (isPinpointMode) {
+                disableMapPinpointMode();
+            }
+        }
+
+        function detectCitizenGPS() {
+            const btn = document.getElementById('btnCitizenDetectGps');
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-600"></i> Detecting GPS...`;
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    document.getElementById('citizenLatInput').value = lat.toFixed(6);
+                    document.getElementById('citizenLngInput').value = lng.toFixed(6);
+                    document.getElementById('citizenCoordsDisplay').innerText = `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E (Live Device GPS)`;
+                    btn.innerHTML = `<i class="fa-solid fa-check text-emerald-600"></i> GPS Locked`;
+                    setTimeout(() => {
+                        btn.innerHTML = `<i class="fa-solid fa-location-crosshairs text-blue-600"></i> Use My Live GPS`;
+                    }, 3000);
+                },
+                err => {
+                    console.warn("GPS error:", err);
+                    alert("Could not access GPS location. You can use 'Click on Map to Drop Pin' instead.");
+                    btn.innerHTML = `<i class="fa-solid fa-location-crosshairs text-blue-600"></i> Use My Live GPS`;
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+
+        function enableMapPinpointMode() {
+            isPinpointMode = true;
+            document.getElementById('citizenReportModal').classList.add('hidden');
+            
+            const mapContainer = document.getElementById('indiaMap');
+            if (mapContainer) mapContainer.style.cursor = 'crosshair';
+
+            let banner = document.getElementById('pinpointModeBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'pinpointModeBanner';
+                banner.className = 'fixed top-6 left-1/2 -translate-x-1/2 z-[2000] bg-slate-900/95 text-white px-5 py-2.5 rounded-2xl shadow-2xl border border-rose-500/50 flex items-center gap-3 font-mono text-xs';
+                banner.innerHTML = `
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                    <span>📍 <strong>Click anywhere on the map</strong> to drop the damage pin</span>
+                    <button onclick="disableMapPinpointMode()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 font-sans text-[11px] cursor-pointer">Cancel</button>
+                `;
+                document.body.appendChild(banner);
+            } else {
+                banner.classList.remove('hidden');
+            }
+
+            map.once('click', e => {
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+
+                document.getElementById('citizenLatInput').value = lat.toFixed(6);
+                document.getElementById('citizenLngInput').value = lng.toFixed(6);
+                document.getElementById('citizenCoordsDisplay').innerText = `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E (Map Selected)`;
+
+                if (citizenPinMarker) {
+                    map.removeLayer(citizenPinMarker);
+                }
+
+                const pinIcon = L.divIcon({
+                    className: '',
+                    html: `<div style="font-size:24px; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4)); animation:bounce 1s infinite;">📍</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28]
+                });
+
+                citizenPinMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
+
+                disableMapPinpointMode();
+                document.getElementById('citizenReportModal').classList.remove('hidden');
+            });
+        }
+
+        function disableMapPinpointMode() {
+            isPinpointMode = false;
+            const mapContainer = document.getElementById('indiaMap');
+            if (mapContainer) mapContainer.style.cursor = '';
+            const banner = document.getElementById('pinpointModeBanner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        async function submitCitizenDamageReport(event) {
+            event.preventDefault();
+            const prog = document.getElementById('citizenUploadProgress');
+            prog.classList.remove('hidden');
+
+            const lat = parseFloat(document.getElementById('citizenLatInput').value) || 28.6139;
+            const lng = parseFloat(document.getElementById('citizenLngInput').value) || 77.2090;
+            const roadName = document.getElementById('citizenRoadNameInput').value.trim();
+            const issueType = document.getElementById('citizenIssueTypeSelect').value;
+            const description = document.getElementById('citizenDescriptionInput').value.trim();
+            const fileInput = document.getElementById('citizenFileInput');
+
+            const formData = new FormData();
+            formData.append('latitude', lat);
+            formData.append('longitude', lng);
+            formData.append('road_name', roadName);
+            formData.append('issue_type', issueType);
+            formData.append('description', description);
+
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            } else {
+                const sample = document.querySelector('input[name="citizen_sample"]:checked');
+                formData.append('image_url', sample ? sample.value : '/static/assets/damaged_roads/0000000000000000_100913988636_11_jpg.rf.025a17688dbcb644485501867cfa24b4.jpg');
+            }
+
+            try {
+                const resp = await fetch('/api/v3/citizen/report-damage', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await resp.json();
+                prog.classList.add('hidden');
+
+                if (!result.success) {
+                    alert('Error submitting report: ' + (result.message || 'Unknown error'));
+                    return;
+                }
+
+                closeCitizenReportModal();
+
+                if (citizenPinMarker) {
+                    map.removeLayer(citizenPinMarker);
+                    citizenPinMarker = null;
+                }
+
+                const pinned = result.pinned_segment;
+
+                map.flyTo([pinned.center_lat, pinned.center_lng], 15, { duration: 1.2 });
+
+                const color = pinned.color_hex || '#EF4444';
+                const customIcon = L.divIcon({
+                    className: '',
+                    html: `<div class="rdd-marker red" style="width:34px; height:34px; font-size:15px; box-shadow:0 0 16px ${color}ff; border:2px solid #fff;">🚩</div>`,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 17]
+                });
+
+                const newMarker = L.marker([pinned.center_lat, pinned.center_lng], { icon: customIcon }).addTo(map);
+                newMarker.bindPopup(`
+                    <div style="font-family:'Inter',sans-serif; min-width:250px; max-width:280px; padding:4px;">
+                        <img src="${pinned.proof_image_url}" style="width:100%; height:96px; object-fit:cover; border-radius:6px; margin-bottom:6px; border:1px solid #e2e8f0;" alt="Damage Proof">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                            <span style="background:#fee2e2; color:#b91c1c; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:4px;">
+                                <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
+                                NEWLY REPORTED DAMAGE
+                            </span>
+                            <span style="font-size:9px; color:#475569; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${pinned.issue_type}</span>
+                        </div>
+                        <span style="font-size:9px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">${pinned.segment_id}</span>
+                        <h4 style="font-weight:800; font-size:13px; margin:2px 0 4px 0; color:#0f172a;">${pinned.road_name}</h4>
+                        ${pinned.description ? `<div style="font-size:10px; color:#1e293b; margin-bottom:6px; background:#f8fafc; padding:4px 6px; border-radius:5px; border-left:3px solid #ef4444;"><strong>Citizen Note:</strong> ${pinned.description}</div>` : ''}
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:6px; background:#f8fafc; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
+                            <span>Condition Score:</span>
+                            <strong style="color:${color}; font-size:13px;">${pinned.health_score} / 100 (${pinned.zone})</strong>
+                        </div>
+                        <div style="font-size:10px; color:#047857; margin-bottom:6px; background:#ecfdf5; padding:4px 6px; border-radius:5px; font-weight:600;">
+                            ✅ AI Model: ${pinned.ai_prediction ? pinned.ai_prediction.label : pinned.issue_type} (Verified)
+                        </div>
+                        <button onclick="selectGovRoadById('${pinned.segment_id}')" style="width:100%; padding:7px; background:#dc2626; color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(220,38,38,0.3);">
+                            Open Government Dossier
+                        </button>
+                    </div>
+                `).openPopup();
+
+                roadPolylines.push(newMarker);
+
+                setTimeout(async () => {
+                    await loadGovRoadNetwork();
+                    selectGovRoadById(pinned.segment_id);
+                }, 800);
+
+            } catch (err) {
+                console.error("Failed to submit citizen report:", err);
+                prog.classList.add('hidden');
+                alert("Failed to submit report. Please try again.");
+            }
+        }
+
         function openCameraUploadModal() {
             document.getElementById('cameraUploadModal').classList.remove('hidden');
         }

@@ -755,14 +755,14 @@ class DatabaseManager:
     
     @staticmethod
     def add_citizen_report(latitude: float, longitude: float, issue_type: str, 
-                          description: str = None, road_id: str = None, road_name: str = None) -> int:
+                          description: str = None, road_id: str = None, road_name: str = None, image_path: str = None) -> int:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         try:
             cursor.execute(
-                'INSERT INTO citizen_reports (road_id, road_name, latitude, longitude, issue_type, description) '
-                'VALUES (?, ?, ?, ?, ?, ?)',
-                (road_id, road_name, latitude, longitude, issue_type, description)
+                'INSERT INTO citizen_reports (road_id, road_name, latitude, longitude, issue_type, description, image_path) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                (road_id, road_name, latitude, longitude, issue_type, description, image_path)
             )
             conn.commit()
             return cursor.lastrowid
