@@ -64,14 +64,15 @@ class TomTomIncidentsService:
             logger.warning("No TOMTOM_KEY found in environment.")
             return []
 
-        cache_key = f"{round(lat, 2)}_{round(lng, 2)}_{round(radius_km, 1)}"
+        effective_radius = min(float(radius_km), 35.0)
+        cache_key = f"{round(lat, 2)}_{round(lng, 2)}_{round(effective_radius, 1)}"
         now_ts = time.time()
         if cache_key in cls._cache:
             entry_ts, cached_data = cls._cache[cache_key]
             if now_ts - entry_ts < 300:  # 5 min cache
                 return cached_data
 
-        bbox = cls.calculate_bbox(lat=lat, lng=lng, radius_km=radius_km)
+        bbox = cls.calculate_bbox(lat=lat, lng=lng, radius_km=effective_radius)
         fields_param = (
             "{incidents{type,geometry{type,coordinates},"
             "properties{id,iconCategory,magnitudeOfDelay,events{description},"
