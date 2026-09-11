@@ -20,6 +20,9 @@ import random
 import requests
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
+import logging
+
+logger = logging.getLogger("roadsense.realtime_engine")
 
 GOOGLE_MAPS_KEY = os.environ.get("GOOGLE_MAPS_KEY", "")
 OPENWEATHER_KEY = os.environ.get("OPENWEATHER_KEY", "")
@@ -54,21 +57,27 @@ class LocationSearchEngine:
                 params = {"address": query, "key": GOOGLE_MAPS_KEY}
                 if lat and lng:
                     params["location"] = f"{lat},{lng}"
-                resp = requests.get(g_url, params=params, timeout=4)
+                try:
+                    resp = requests.get(g_url, params=params, timeout=4)
+                except requests.exceptions.SSLError:
+                    resp = requests.get(g_url, params=params, timeout=4, verify=False)
                 if resp.status_code == 200:
                     data = resp.json()
-                    for item in data.get("results", [])[:6]:
-                        loc = item.get("geometry", {}).get("location", {})
-                        results.append({
-                            "formatted_address": item.get("formatted_address"),
-                            "display_name": item.get("formatted_address"),
-                            "latitude": loc.get("lat"),
-                            "longitude": loc.get("lng"),
-                            "place_id": item.get("place_id"),
-                            "source": "GOOGLE_MAPS"
-                        })
-            except Exception:
-                pass
+                    if data.get("status") == "OK":
+                        for item in data.get("results", [])[:6]:
+                            loc = item.get("geometry", {}).get("location", {})
+                            results.append({
+                                "formatted_address": item.get("formatted_address"),
+                                "display_name": item.get("formatted_address"),
+                                "latitude": loc.get("lat"),
+                                "longitude": loc.get("lng"),
+                                "place_id": item.get("place_id"),
+                                "source": "GOOGLE_MAPS"
+                            })
+                    else:
+                        logger.warning(f"Google Maps API status: {data.get('status')} - {data.get('error_message', '')}")
+            except Exception as e:
+                logger.warning(f"Google Maps geocoding error: {e}")
 
         # 2. Fallback to OpenStreetMap Nominatim if Google Maps returned nothing or no key
         if not results:
@@ -76,7 +85,10 @@ class LocationSearchEngine:
                 headers = {"User-Agent": "RoadSenseAI-LocationService/3.0"}
                 n_url = "https://nominatim.openstreetmap.org/search"
                 params = {"q": query, "format": "json", "countrycodes": "in,us,jp,no,cz,ir", "limit": 6}
-                resp = requests.get(n_url, params=params, headers=headers, timeout=4)
+                try:
+                    resp = requests.get(n_url, params=params, headers=headers, timeout=5)
+                except requests.exceptions.SSLError:
+                    resp = requests.get(n_url, params=params, headers=headers, timeout=5, verify=False)
                 if resp.status_code == 200:
                     data = resp.json()
                     for item in data:
@@ -88,8 +100,8 @@ class LocationSearchEngine:
                             "place_id": str(item.get("place_id")),
                             "source": "NOMINATIM_OSM"
                         })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Nominatim OSM geocoding error: {e}")
 
         # 3. If external network is unavailable, provide smart fallback from local Indian cities & landmarks
         if not results:
@@ -116,8 +128,10 @@ class LocationSearchEngine:
                 {"name": "Hazratganj Road, Lucknow", "city": "Lucknow", "state": "Uttar Pradesh", "lat": 26.8467, "lng": 80.9462}
             ]
             q_lower = query.lower()
+            q_words = [w.strip() for w in q_lower.replace(",", " ").split() if len(w.strip()) >= 3]
             for loc in known_locations:
-                if q_lower in loc["name"].lower() or q_lower in loc["city"].lower() or q_lower in loc["state"].lower():
+                loc_str = f"{loc['name']} {loc['city']} {loc['state']}".lower()
+                if q_lower in loc_str or any(w in loc_str for w in q_words):
                     results.append({
                         "formatted_address": f"{loc['name']}, {loc['city']}, {loc['state']}, India",
                         "display_name": f"{loc['name']}, {loc['city']}, {loc['state']}",
