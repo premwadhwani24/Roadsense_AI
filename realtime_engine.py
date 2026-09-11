@@ -132,14 +132,60 @@ class LocationSearchEngine:
 
 class WeatherEngine:
     """Fetches real-time weather & precipitation or generates realistic environmental state."""
+    _cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 
     @staticmethod
     def get_weather(city: str = "", lat: Optional[float] = None, lng: Optional[float] = None) -> Dict[str, Any]:
-        # 1. Try Open-Meteo free API first (No API key required)
+        cache_key = f"{city.strip().lower()}_{round(lat, 2) if lat is not None else ''}_{round(lng, 2) if lng is not None else ''}"
+        now_ts = time.time()
+        if cache_key in WeatherEngine._cache:
+            entry_ts, cached_data = WeatherEngine._cache[cache_key]
+            if now_ts - entry_ts < 300:
+                return cached_data
+
+        ow_key = os.getenv("OPENWEATHER_KEY") or OPENWEATHER_KEY
+
+        # 1. Try OpenWeather API first if key is configured
+        if ow_key and (city or (lat is not None and lng is not None)):
+            try:
+                params = {"appid": ow_key, "units": "metric"}
+                if lat is not None and lng is not None:
+                    params["lat"] = lat
+                    params["lon"] = lng
+                else:
+                    params["q"] = f"{city},IN"
+                w_url = "https://api.openweathermap.org/data/2.5/weather"
+                try:
+                    resp = requests.get(w_url, params=params, timeout=3)
+                except requests.exceptions.SSLError:
+                    resp = requests.get(w_url, params=params, timeout=3, verify=False)
+
+                if resp.status_code == 200:
+                    d = resp.json()
+                    res = {
+                        "temperature_c": d.get("main", {}).get("temp", 28.5),
+                        "humidity_pct": d.get("main", {}).get("humidity", 65),
+                        "condition": d.get("weather", [{}])[0].get("main", "Clear"),
+                        "description": d.get("weather", [{}])[0].get("description", "clear sky"),
+                        "rainfall_last_3h_mm": d.get("rain", {}).get("3h", 0.0),
+                        "wind_speed_kmh": round(d.get("wind", {}).get("speed", 3.5) * 3.6, 1),
+                        "water_logging_risk": "HIGH" if d.get("rain", {}).get("3h", 0) > 15 else "LOW",
+                        "source": "OPENWEATHER_LIVE",
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }
+                    WeatherEngine._cache[cache_key] = (now_ts, res)
+                    return res
+            except Exception:
+                pass
+
+        # 2. Try Open-Meteo free API (No API key required)
         if lat is not None and lng is not None:
             try:
-                om_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon if 'lon' in locals() else lng}&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m"
-                resp = requests.get(om_url, timeout=3)
+                om_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m"
+                try:
+                    resp = requests.get(om_url, timeout=3)
+                except requests.exceptions.SSLError:
+                    resp = requests.get(om_url, timeout=3, verify=False)
                 if resp.status_code == 200:
                     data = resp.json().get("current", {})
                     temp = data.get("temperature_2m", 28.0)
@@ -153,7 +199,7 @@ class WeatherEngine:
                     elif wcode in [51, 53, 55, 61, 63, 65, 80, 81]: cond = "Rain"
                     elif wcode in [95, 96, 99]: cond = "Thunderstorm"
 
-                    return {
+                    res = {
                         "temperature_c": temp,
                         "humidity_pct": rh,
                         "condition": cond,
@@ -164,32 +210,8 @@ class WeatherEngine:
                         "source": "OPEN_METEO_LIVE",
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     }
-            except Exception as e:
-                pass
-
-        if OPENWEATHER_KEY and (city or (lat and lng)):
-            try:
-                params = {"appid": OPENWEATHER_KEY, "units": "metric"}
-                if lat and lng:
-                    params["lat"] = lat
-                    params["lon"] = lng
-                else:
-                    params["q"] = f"{city},IN"
-                w_url = "https://api.openweathermap.org/data/2.5/weather"
-                resp = requests.get(w_url, params=params, timeout=3)
-                if resp.status_code == 200:
-                    d = resp.json()
-                    return {
-                        "temperature_c": d.get("main", {}).get("temp", 28.5),
-                        "humidity_pct": d.get("main", {}).get("humidity", 65),
-                        "condition": d.get("weather", [{}])[0].get("main", "Clear"),
-                        "description": d.get("weather", [{}])[0].get("description", "clear sky"),
-                        "rainfall_last_3h_mm": d.get("rain", {}).get("3h", 0.0),
-                        "wind_speed_kmh": round(d.get("wind", {}).get("speed", 3.5) * 3.6, 1),
-                        "water_logging_risk": "HIGH" if d.get("rain", {}).get("3h", 0) > 15 else "LOW",
-                        "source": "OPENWEATHER_LIVE",
-                        "timestamp": datetime.utcnow().isoformat() + "Z"
-                    }
+                    WeatherEngine._cache[cache_key] = (now_ts, res)
+                    return res
             except Exception:
                 pass
 
@@ -201,7 +223,7 @@ class WeatherEngine:
         is_raining = rain_prob > 0.75
         rain_mm = round(random.uniform(2.0, 18.0), 1) if is_raining else 0.0
 
-        return {
+        res = {
             "temperature_c": temp,
             "humidity_pct": humidity,
             "condition": "Rain" if is_raining else ("Clouds" if rain_prob > 0.4 else "Clear"),
@@ -212,24 +234,38 @@ class WeatherEngine:
             "source": "RECENT_TELEMETRY_ESTIMATE",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
+        WeatherEngine._cache[cache_key] = (now_ts, res)
+        return res
 
 
 class TrafficEngine:
     """Fetches real-time traffic or computes congestion indices from road load."""
+    _cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 
     @staticmethod
     def get_traffic(lat: float, lng: float, road_name: str = "") -> Dict[str, Any]:
-        if TOMTOM_KEY:
+        cache_key = f"{round(lat, 2)}_{round(lng, 2)}"
+        now_ts = time.time()
+        if cache_key in TrafficEngine._cache:
+            entry_ts, cached_data = TrafficEngine._cache[cache_key]
+            if now_ts - entry_ts < 180:
+                return cached_data
+
+        tt_key = os.getenv("TOMTOM_KEY") or TOMTOM_KEY
+        if tt_key:
             try:
                 t_url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/relative0/10/json"
-                params = {"point": f"{lat},{lng}", "key": TOMTOM_KEY}
-                resp = requests.get(t_url, params=params, timeout=3)
+                params = {"point": f"{lat},{lng}", "key": tt_key}
+                try:
+                    resp = requests.get(t_url, params=params, timeout=3)
+                except requests.exceptions.SSLError:
+                    resp = requests.get(t_url, params=params, timeout=3, verify=False)
                 if resp.status_code == 200:
                     d = resp.json().get("flowSegmentData", {})
                     current_speed = d.get("currentSpeed", 35)
                     free_flow = d.get("freeFlowSpeed", 50)
                     delay = d.get("currentTravelTime", 100) - d.get("freeFlowTravelTime", 80)
-                    return {
+                    res = {
                         "current_speed_kmh": current_speed,
                         "free_flow_speed_kmh": free_flow,
                         "congestion_pct": round(max(0, (1 - current_speed / max(1, free_flow)) * 100), 1),
@@ -238,6 +274,8 @@ class TrafficEngine:
                         "source": "TOMTOM_LIVE",
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     }
+                    TrafficEngine._cache[cache_key] = (now_ts, res)
+                    return res
             except Exception:
                 pass
 
@@ -251,7 +289,7 @@ class TrafficEngine:
 
         level = "HEAVY" if congestion > 65 else ("MODERATE" if congestion > 35 else "SMOOTH")
 
-        return {
+        res = {
             "current_speed_kmh": max(8.0, current_speed),
             "free_flow_speed_kmh": free_flow,
             "congestion_pct": congestion,
@@ -260,6 +298,8 @@ class TrafficEngine:
             "source": "RECENT_ESTIMATE",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
+        TrafficEngine._cache[cache_key] = (now_ts, res)
+        return res
 
 
 class RealTimeHealthEngine:

@@ -365,6 +365,10 @@
 
                     <!-- Map Floating Layer Controls Bar -->
                     <div id="mapControlsBar" class="absolute top-4 right-4 z-[1000] flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700 shadow-xl">
+                        <button id="btnToggleLiveHazards" onclick="toggleLiveHazards()" class="px-2.5 py-1 rounded-xl text-[11px] font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 hover:bg-rose-900 transition flex items-center gap-1.5 shadow-sm" title="Toggle Real-Time TomTom Road Hazards & Closures">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block"></span>
+                            <span>📡 Live Hazards (<span id="liveHazardCountPill">--</span>)</span>
+                        </button>
                         <button id="btnTileCarto" onclick="switchTileProvider('carto')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-indigo-600 text-white shadow-sm transition">🗺️ Map</button>
                         <button id="btnTileOsm" onclick="switchTileProvider('osm')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🌍 OSM</button>
                         <button id="btnTileEsri" onclick="switchTileProvider('esri')" class="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🛰️ Satellite</button>
@@ -1388,11 +1392,25 @@
             initGovSSE();
         });
 
+        let liveHazardsActive = true;
+        function toggleLiveHazards() {
+            liveHazardsActive = !liveHazardsActive;
+            const btn = document.getElementById('btnToggleLiveHazards');
+            if (btn) {
+                if (liveHazardsActive) {
+                    btn.className = 'px-2.5 py-1 rounded-xl text-[11px] font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 hover:bg-rose-900 transition flex items-center gap-1.5 shadow-sm';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-xl text-[11px] font-bold text-slate-400 bg-slate-800 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5 opacity-60';
+                }
+            }
+            loadGovRoadNetwork();
+        }
+
         // Load Road Network from API
         async function loadGovRoadNetwork(state = null, status = null) {
             initGovMap();
             try {
-                let url = '/api/v3/gov/network?radius_km=60';
+                let url = `/api/v3/gov/network?radius_km=60&live_incidents=${liveHazardsActive}`;
                 if (state && state !== 'ALL') url += `&state=${encodeURIComponent(state)}`;
                 if (status && status !== 'ALL') url += `&status=${status}`;
 
@@ -1400,6 +1418,12 @@
                 const data = await res.json();
 
                 currentSegments = data.segments || [];
+                const pill = document.getElementById('liveHazardCountPill');
+                if (pill) {
+                    const count = data.live_incidents_count !== undefined ? data.live_incidents_count : currentSegments.filter(s => s.provenance === 'TOMTOM_TRAFFIC_INCIDENTS_API').length;
+                    pill.innerText = count;
+                }
+
                 if (!map) initGovMap();
                 
                 renderRoadPolylines(currentSegments);
@@ -1495,11 +1519,13 @@
                     }).addTo(map);
 
                     polyline.on('click', () => selectGovRoad(seg));
+                    const isLive = seg.source === 'TOMTOM_LIVE_INCIDENTS';
                     polyline.bindTooltip(`
                         <div style="font-family:'Inter',sans-serif; font-size:11px; padding:2px;">
-                            <strong style="font-size:12px; color:#0f172a;">${seg.road_name}</strong><br>
+                            <strong style="font-size:12px; color:#0f172a;">${isLive ? '🚨 LIVE HAZARD: ' : ''}${seg.road_name}</strong><br>
                             <span style="display:inline-block; margin-top:2px; font-weight:700; color:${color};">${zoneTitle}</span><br>
                             <span>Health Score: <strong>${Math.round(score)}/100</strong> • IRI: ${seg.iri_score || 1.8} m/km</span>
+                            ${isLive && seg.event_description ? `<div style="font-size:10px; color:#b91c1c; margin-top:3px; font-weight:600;">⚠️ ${seg.event_description}</div>` : ''}
                         </div>
                     `, { sticky: true });
                     roadPolylines.push(polyline);
@@ -1508,12 +1534,13 @@
 
                 // 2. Draw Center Point Marker
                 if (seg.center_lat && seg.center_lng) {
+                    const isLive = seg.source === 'TOMTOM_LIVE_INCIDENTS';
                     const iconClass = zone === 'RED' ? 'red' : (zone === 'YELLOW' ? 'yellow' : (zone === 'GREEN' ? 'green' : 'uninspected'));
-                    const iconSymbol = zone === 'RED' ? '!' : (zone === 'YELLOW' ? '⚡' : (zone === 'GREEN' ? '✓' : '?'));
+                    const iconSymbol = isLive ? (zone === 'RED' ? '🚨' : '⚠️') : (zone === 'RED' ? '!' : (zone === 'YELLOW' ? '⚡' : (zone === 'GREEN' ? '✓' : '?')));
 
                     const icon = L.divIcon({
                         className: '',
-                        html: `<div class="rdd-marker ${iconClass}" style="width:28px; height:28px; font-size:12px; box-shadow:0 0 10px ${color}88;">${iconSymbol}</div>`,
+                        html: `<div class="rdd-marker ${iconClass}" style="width:28px; height:28px; font-size:12px; box-shadow:0 0 12px ${color}aa;">${iconSymbol}</div>`,
                         iconSize: [28, 28],
                         iconAnchor: [14, 14]
                     });
@@ -1522,24 +1549,49 @@
                     marker.on('click', () => selectGovRoad(seg));
 
                     const proofImg = seg.proof_image_url || seg.image_url || '';
-                    const proofImgHtml = proofImg ? `<img src="${proofImg}" style="width:100%; height:90px; object-fit:cover; border-radius:6px; margin-bottom:6px; border:1px solid #e2e8f0;" alt="Road Condition Proof" onerror="this.style.display='none'">` : '';
+                    const proofImgHtml = proofImg ? `<img src="${proofImg}" style="width:100%; height:96px; object-fit:cover; border-radius:6px; margin-bottom:6px; border:1px solid #e2e8f0;" alt="Road Condition Proof" onerror="this.style.display='none'">` : '';
+
+                    const liveBadgeHtml = isLive ? `
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                            <span style="background:#fee2e2; color:#b91c1c; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:4px;">
+                                <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
+                                LIVE TELEMETRY
+                            </span>
+                            <span style="font-size:9px; color:#475569; font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${seg.incident_category || 'Hazard'}</span>
+                        </div>
+                    ` : '';
+
+                    const delayHtml = (isLive && seg.delay_seconds > 0) ? `
+                        <div style="font-size:10px; color:#dc2626; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-clock"></i> Active Delay: ~${Math.round(seg.delay_seconds / 60)} mins
+                        </div>
+                    ` : '';
+
+                    const causeHtml = (isLive && seg.event_description) ? `
+                        <div style="font-size:10px; color:#1e293b; margin-bottom:6px; background:#f8fafc; padding:4px 6px; border-radius:5px; border-left:3px solid ${color};">
+                            <strong>Cause:</strong> ${seg.event_description}
+                        </div>
+                    ` : '';
 
                     marker.bindPopup(`
-                        <div style="font-family:'Inter',sans-serif; min-width:240px; padding:4px;">
+                        <div style="font-family:'Inter',sans-serif; min-width:250px; max-width:280px; padding:4px;">
                             ${proofImgHtml}
+                            ${liveBadgeHtml}
                             <span style="font-size:9px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">${seg.segment_id}</span>
                             <h4 style="font-weight:800; font-size:13px; margin:2px 0 4px 0; color:#0f172a;">${seg.road_name}</h4>
-                            <div style="font-size:11px; color:#475569; margin-bottom:6px;">${seg.city || 'New Delhi'}, ${seg.state || 'Delhi'} • ${seg.road_type || 'Arterial'}</div>
+                            <div style="font-size:11px; color:#475569; margin-bottom:6px;">${seg.city || 'Delhi NCR'}, ${seg.state || 'India'} • ${seg.road_type || 'Arterial'}</div>
+                            ${delayHtml}
+                            ${causeHtml}
                             <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:6px; background:#f8fafc; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0;">
                                 <span>Condition Score:</span>
                                 <strong style="color:${color}; font-size:13px;">${Math.round(score)} / 100 (${zone})</strong>
                             </div>
-                            <div style="display:flex; gap:6px; font-size:10px; margin-bottom:6px; color:#64748b;">
+                            <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:8px; color:#64748b; background:#f8fafc; padding:4px 8px; border-radius:6px;">
                                 <span>IRI: <strong>${seg.iri_score || 'N/A'}</strong></span>
                                 <span>Potholes: <strong>${seg.pothole_count || 0}</strong></span>
                                 <span>Cracks: <strong>${seg.crack_count || 0}</strong></span>
                             </div>
-                            <button onclick="selectGovRoadById('${seg.segment_id}')" style="width:100%; padding:6px; background:#1d4ed8; color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(29,78,216,0.3);">
+                            <button onclick="selectGovRoadById('${seg.segment_id}')" style="width:100%; padding:7px; background:#1d4ed8; color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 2px 4px rgba(29,78,216,0.3);">
                                 Open Road Profile & Evidence
                             </button>
                         </div>
@@ -1572,24 +1624,29 @@
                 else if (cond === 'DATA_UNAVAILABLE') statusColor = 'slate';
 
                 const isSelected = activeSegment && activeSegment.segment_id === seg.segment_id;
+                const isLive = seg.source === 'TOMTOM_LIVE_INCIDENTS';
 
                 return `
                     <div onclick="selectGovRoadById('${seg.segment_id}')" 
                         class="p-3 rounded-2xl cursor-pointer transition-all border ${isSelected ? 'bg-blue-50/90 border-blue-400 shadow-sm' : 'hover:bg-slate-50 border-transparent'}">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-[9px] font-mono font-bold text-slate-400 block">${seg.segment_id}</span>
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <span class="text-[9px] font-mono font-bold text-slate-400">${seg.segment_id}</span>
+                                    ${isLive ? `<span class="inline-flex items-center gap-1 text-[8px] font-extrabold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.2 rounded-full uppercase"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>LIVE</span>` : ''}
+                                </div>
                                 <h4 class="text-xs font-black text-slate-900 leading-tight">${seg.road_name}</h4>
-                                <span class="text-[10px] text-slate-500 font-mono">${seg.city}, ${seg.state} • ${seg.road_type}</span>
+                                <span class="text-[10px] text-slate-500 font-mono block mt-0.5">${seg.city || 'Delhi NCR'}, ${seg.state || 'India'} • ${seg.road_type || 'Arterial'}</span>
+                                ${isLive && seg.event_description ? `<div class="text-[9px] text-rose-700 font-semibold mt-1 truncate">⚠️ ${seg.event_description}</div>` : ''}
                             </div>
-                            <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-${statusColor}-100 text-${statusColor}-800">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-${statusColor}-100 text-${statusColor}-800 shrink-0">
                                 ${cond}
                             </span>
                         </div>
                         <div class="flex justify-between items-center mt-2 text-[10px] text-slate-600 font-mono">
                             <span>Health: <strong>${seg.health_score !== null ? seg.health_score + '/100' : 'N/A'}</strong></span>
                             <span>IRI: <strong>${seg.iri_score || 'N/A'}</strong></span>
-                            <span>Lanes: <strong>${seg.lanes || 4}</strong></span>
+                            <span>${seg.length_km ? seg.length_km + ' km' : (seg.lanes || 4) + ' lanes'}</span>
                         </div>
                         ${(seg.proof_image_url || seg.image_url) ? `
                         <div class="mt-2 rounded-lg overflow-hidden h-16 bg-slate-100 border border-slate-200">
@@ -1727,7 +1784,7 @@
                         <span>#${i+1} ${r.source_type}</span>
                         <span class="text-blue-600">${(r.confidence * 100).toFixed(0)}% Conf</span>
                     </div>
-                    <span class="text-[10px] text-slate-400 block truncate">GPS: ${r.latitude.toFixed(4)}, ${r.longitude.toFixed(4)}</span>
+                    <span class="text-[10px] text-slate-400 block truncate">GPS: ${Number(r.latitude || 0).toFixed(4)}, ${Number(r.longitude || 0).toFixed(4)}</span>
                 </div>
             `).join('');
         }

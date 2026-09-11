@@ -1,7 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/**/*.py": {
-      "includeFiles": ["templates/**", "static/**", "roadsense.db"]
+      "includeFiles": "{templates/**,static/**,roadsense.db}",
+      "maxDuration": 30
     }
   },
   "rewrites": [
